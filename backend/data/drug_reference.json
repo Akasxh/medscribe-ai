@@ -1,0 +1,22 @@
+{
+  "Crocin": {"generic": "Paracetamol", "category": "Antipyretic/Analgesic"},
+  "Dolo": {"generic": "Paracetamol 650mg", "category": "Antipyretic/Analgesic"},
+  "Combiflam": {"generic": "Ibuprofen + Paracetamol", "category": "NSAID/Analgesic"},
+  "Azithral": {"generic": "Azithromycin", "category": "Antibiotic"},
+  "Pan-D": {"generic": "Pantoprazole + Domperidone", "category": "Antacid"},
+  "Shelcal": {"generic": "Calcium + Vitamin D3", "category": "Supplement"},
+  "Glycomet": {"generic": "Metformin", "category": "Antidiabetic"},
+  "Cetrizine": {"generic": "Cetirizine", "category": "Antihistamine"},
+  "Allegra": {"generic": "Fexofenadine", "category": "Antihistamine"},
+  "Augmentin": {"generic": "Amoxicillin + Clavulanic Acid", "category": "Antibiotic"},
+  "Zifi": {"generic": "Cefixime", "category": "Antibiotic"},
+  "ORS": {"generic": "Oral Rehydration Salts", "category": "Rehydration"},
+  "Zinc": {"generic": "Zinc Sulfate", "category": "Supplement"},
+  "Benadryl": {"generic": "Diphenhydramine", "category": "Cough Suppressant"},
+  "Grilinctus": {"generic": "Dextromethorphan + Chlorpheniramine", "category": "Cough Syrup"},
+  "Ascoril": {"generic": "Levosalbutamol + Ambroxol + Guaifenesin", "category": "Cough Syrup"},
+  "Montair": {"generic": "Montelukast", "category": "Anti-asthmatic"},
+  "Deriphyllin": {"generic": "Etofylline + Theophylline", "category": "Bronchodilator"},
+  "Ecosprin": {"generic": "Aspirin", "category": "Antiplatelet"},
+  "Telma": {"generic": "Telmisartan", "category": "Antihypertensive"}
+}

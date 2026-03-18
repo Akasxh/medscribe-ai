@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedScribe AI — HACKMATRIX 2.0 Presentation</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f172a;
+    --bg-card: #1e293b;
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent: #2563eb;
+    --accent-light: #3b82f6;
+    --green: #10b981;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --pink: #ec4899;
+    --violet: #8b5cf6;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .deck {
+    display: flex;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 100vh;
+  }
+
+  .slide {
+    min-width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Slide counter */
+  #counter {
+    position: fixed;
+    bottom: 24px;
+    right: 32px;
+    font-size: 16px;
+    color: var(--text-muted);
+    z-index: 100;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Nav hint */
+  #nav-hint {
+    position: fixed;
+    bottom: 24px;
+    left: 32px;
+    font-size: 14px;
+    color: var(--text-muted);
+    z-index: 100;
+    opacity: 0.6;
+  }
+
+  /* Progress bar */
+  #progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: var(--accent);
+    z-index: 100;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Typography */
+  h1 {
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin-bottom: 24px;
+  }
+
+  h3 {
+    font-size: 32px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  p, li {
+    font-size: 26px;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  .big-stat {
+    font-size: 56px;
+    font-weight: 800;
+    color: var(--accent-light);
+    margin-bottom: 8px;
+  }
+
+  .accent { color: var(--accent-light); }
+  .green { color: var(--green); }
+  .red { color: var(--red); }
+  .amber { color: var(--amber); }
+  .pink { color: var(--pink); }
+  .violet { color: var(--violet); }
+  .white { color: #fff; }
+  .muted { color: var(--text-muted); }
+  .bold { font-weight: 700; }
+
+  .subtitle {
+    font-size: 28px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    font-weight: 400;
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 6px 18px;
+    border-radius: 999px;
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 16px;
+  }
+
+  .tag-blue {
+    background: rgba(37,99,235,0.15);
+    color: var(--accent-light);
+    border: 1px solid rgba(37,99,235,0.3);
+  }
+
+  /* Layout helpers */
+  .center { text-align: center; }
+  .left { text-align: left; }
+  .w-full { width: 100%; }
+  .max-w { max-width: 1100px; }
+  .mt-8 { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+  .mt-24 { margin-top: 24px; }
+  .mt-32 { margin-top: 32px; }
+  .mt-48 { margin-top: 48px; }
+  .mb-8 { margin-bottom: 8px; }
+  .mb-16 { margin-bottom: 16px; }
+  .mb-32 { margin-bottom: 32px; }
+  .gap-24 { gap: 24px; }
+  .gap-32 { gap: 32px; }
+  .gap-40 { gap: 40px; }
+
+  .flex { display: flex; }
+  .flex-col { flex-direction: column; }
+  .items-center { align-items: center; }
+  .justify-center { justify-content: center; }
+
+  .cols-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 40px;
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  .cols-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 32px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .card h3 { font-size: 24px; margin-bottom: 12px; }
+  .card p, .card li { font-size: 22px; }
+
+  .icon-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+  }
+
+  .ic-blue { background: rgba(37,99,235,0.2); }
+  .ic-green { background: rgba(16,185,129,0.2); }
+  .ic-amber { background: rgba(245,158,11,0.2); }
+  .ic-red { background: rgba(239,68,68,0.2); }
+  .ic-violet { background: rgba(139,92,246,0.2); }
+  .ic-pink { background: rgba(236,72,153,0.2); }
+
+  ul.bullets {
+    list-style: none;
+    padding: 0;
+  }
+
+  ul.bullets li {
+    padding: 8px 0;
+    padding-left: 32px;
+    position: relative;
+  }
+
+  ul.bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 18px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .quote {
+    font-size: 36px;
+    font-weight: 700;
+    color: #fff;
+    font-style: italic;
+    border-left: 4px solid var(--accent);
+    padding-left: 24px;
+    margin: 24px 0;
+    max-width: 900px;
+  }
+
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 32px 0;
+  }
+
+  .pipe-box {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 14px 22px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  .pipe-arrow {
+    font-size: 24px;
+    color: var(--accent-light);
+  }
+
+  .code-block {
+    background: #0d1117;
+    border-radius: 12px;
+    padding: 20px 28px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 20px;
+    color: var(--green);
+    border: 1px solid rgba(255,255,255,0.08);
+    max-width: 900px;
+    width: 100%;
+    margin: 16px 0;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+
+  .screenshot {
+    max-width: 700px;
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    margin-top: 24px;
+  }
+
+  .specialty-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    width: 100%;
+    max-width: 1000px;
+  }
+
+  .spec-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid rgba(255,255,255,0.06);
+    text-align: center;
+  }
+
+  .spec-card .spec-icon { font-size: 36px; margin-bottom: 8px; }
+  .spec-card h4 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .spec-card p { font-size: 17px; color: var(--text-muted); }
+
+  .arch-diagram {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 36px 48px;
+    border: 1px solid rgba(255,255,255,0.08);
+    max-width: 1000px;
+    width: 100%;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 17px;
+    line-height: 1.8;
+    color: var(--text-muted);
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .score-ring {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 6px solid var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    font-weight: 800;
+    color: var(--green);
+    margin: 0 auto 16px auto;
+  }
+
+  .divider {
+    width: 80px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 2px;
+    margin: 24px auto;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    max-width: 1100px;
+    width: 100%;
+    align-items: center;
+  }
+
+  .badge-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .badge-blue { background: rgba(37,99,235,0.2); color: var(--accent-light); }
+  .badge-green { background: rgba(16,185,129,0.2); color: var(--green); }
+  .badge-amber { background: rgba(245,158,11,0.2); color: var(--amber); }
+  .badge-red { background: rgba(239,68,68,0.2); color: var(--red); }
+  .badge-violet { background: rgba(139,92,246,0.2); color: var(--violet); }
+
+  /* Slide-specific backgrounds */
+  .slide-title {
+    background: radial-gradient(ellipse at 50% 0%, rgba(37,99,235,0.15) 0%, transparent 60%),
+                var(--bg);
+  }
+
+  .slide-problem {
+    background: radial-gradient(ellipse at 80% 80%, rgba(239,68,68,0.08) 0%, transparent 50%),
+                var(--bg);
+  }
+
+  .slide-solution {
+    background: radial-gradient(ellipse at 20% 50%, rgba(16,185,129,0.08) 0%, transparent 50%),
+                var(--bg);
+  }
+
+  .slide-thankyou {
+    background: radial-gradient(ellipse at 50% 50%, rgba(37,99,235,0.12) 0%, transparent 60%),
+                var(--bg);
+  }
+
+  /* Print */
+  @media print {
+    body { overflow: visible; height: auto; }
+    .deck {
+      flex-direction: column;
+      transform: none !important;
+      transition: none;
+    }
+    .slide {
+      min-width: 100%;
+      page-break-after: always;
+      page-break-inside: avoid;
+      height: 100vh;
+    }
+    #counter, #nav-hint, #progress { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<div id="counter"></div>
+<div id="nav-hint">Arrow keys or click to navigate</div>
+
+<div class="deck" id="deck">
+
+  <!-- SLIDE 1: Title -->
+  <section class="slide slide-title center">
+    <div>
+      <p class="muted" style="font-size:20px;letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;">HACKMATRIX 2.0 &nbsp;&bull;&nbsp; Jilo Health &nbsp;&bull;&nbsp; NJACK IIT Patna</p>
+      <h1 style="font-size:80px;">Med<span class="accent">Scribe</span> AI</h1>
+      <p class="subtitle" style="font-size:30px;max-width:800px;margin:0 auto;">Mobile-First Ambient AI Scribe<br>with Real-Time FHIR Conversion</p>
+      <div class="divider"></div>
+      <p style="font-size:22px;color:var(--text-muted);margin-top:20px;">Akash &nbsp;&bull;&nbsp; Solo Builder &nbsp;&bull;&nbsp; Team MedVani</p>
+      <p style="font-size:14px;color:var(--text-muted);margin-top:4px;opacity:0.7;">MedVani = Med + &#x0935;&#x093E;&#x0923;&#x0940; (voice in Sanskrit)</p>
+      <div class="badge-row" style="justify-content:center;margin-top:24px;">
+        <span class="badge badge-blue">PS-1</span>
+        <span class="badge badge-green">PWA</span>
+        <span class="badge badge-amber">FHIR R4</span>
+        <span class="badge badge-violet">Gemini 2.5 Flash</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 2: The Problem -->
+  <section class="slide slide-problem">
+    <div class="max-w w-full">
+      <h2><span class="red">The Problem</span></h2>
+      <div class="quote">"Every doctor in India loses 2+ hours/day to paperwork"</div>
+      <div class="cols-3 mt-32">
+        <div class="card center">
+          <div class="big-stat red">70%</div>
+          <p>of doctors say documentation burden causes <strong class="white">burnout</strong></p>
+        </div>
+        <div class="card center">
+          <div class="big-stat amber">1:1511</div>
+          <p>Doctor-to-patient ratio in India<br><span style="font-size:18px;">(WHO target: 1:1000)</span></p>
+        </div>
+        <div class="card center">
+          <div class="big-stat" style="color:var(--text-muted);">0</div>
+          <p>Existing tools that handle <strong class="white">Hindi-English code-mixed</strong> medical speech</p>
+        </div>
+      </div>
+      <p class="mt-32 center" style="font-size:28px;color:#fff;">Time spent writing notes = time <span class="red">NOT</span> spent with patients</p>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: Our Solution -->
+  <section class="slide slide-solution">
+    <div class="max-w w-full center">
+      <h2>Our <span class="green">Solution</span></h2>
+      <p class="subtitle" style="font-size:28px;">Speak naturally. Get structured clinical notes instantly.</p>
+      <div class="cols-3 mt-32">
+        <div class="card center">
+          <div class="icon-circle ic-red" style="margin:0 auto 16px auto;"><span style="font-size:28px;">&#127908;</span></div>
+          <h3 class="white">Record</h3>
+          <p>Doctor speaks with patient in Hindi, English, or both</p>
+        </div>
+        <div class="card center">
+          <div class="icon-circle ic-blue" style="margin:0 auto 16px auto;"><span style="font-size:28px;">&#129504;</span></div>
+          <h3 class="white">Extract</h3>
+          <p>AI understands code-mixed medical conversations in real-time</p>
+        </div>
+        <div class="card center">
+          <div class="icon-circle ic-green" style="margin:0 auto 16px auto;"><span style="font-size:28px;">&#128203;</span></div>
+          <h3 class="white">Document</h3>
+          <p>Structured FHIR R4 compliant records appear instantly</p>
+        </div>
+      </div>
+      <img src="screenshots/01-hero-desktop.png" alt="MedScribe AI Desktop View" class="screenshot mt-32">
+    </div>
+  </section>
+
+  <!-- SLIDE 4: Live Demo Flow -->
+  <section class="slide">
+    <div class="max-w w-full center">
+      <h2>Live Demo <span class="accent">Flow</span></h2>
+      <div class="pipeline mt-32">
+        <div class="pipe-box">&#127908; Browser Mic</div>
+        <span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-box">Web Speech API</div>
+        <span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-box">WebSocket</div>
+        <span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-box" style="border-color:var(--accent);">Gemini 2.5 Flash</div>
+        <span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-box">FHIR R4</div>
+        <span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-box" style="border-color:var(--green);">Real-Time UI</div>
+      </div>
+      <div class="cols-2 mt-48">
+        <div class="left">
+          <ul class="bullets">
+            <li><strong class="white">Zero API keys for speech</strong> &mdash; browser-native STT</li>
+            <li><strong class="white">Works on any smartphone</strong> with Chrome/Edge</li>
+            <li><strong class="white">Patient consent</strong> banner before recording</li>
+            <li><strong class="white">Real-time streaming</strong> &mdash; see notes appear as doctor speaks</li>
+          </ul>
+        </div>
+        <div class="center">
+          <img src="screenshots/03-consent-banner.png" alt="Consent Banner" class="screenshot" style="max-width:400px;">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5: Hindi-English Code-Mixing -->
+  <section class="slide">
+    <div class="max-w w-full">
+      <h2><span class="amber">Differentiator 1</span><br>Hindi-English Code-Mixing</h2>
+      <p class="subtitle">First ambient scribe that understands Indian medical conversations</p>
+      <div class="code-block mt-32">
+<span style="color:var(--text-muted);">// Doctor says:</span>
+<span style="color:var(--amber);">"Patient ko 3 din se bukhar hai, temperature 101&deg;F,</span>
+<span style="color:var(--amber);"> Crocin diya tha but fever nahi utra"</span>
+
+<span style="color:var(--text-muted);">// MedScribe AI extracts:</span>
+<span style="color:var(--accent-light);">{</span>
+  <span style="color:var(--pink);">"chief_complaint"</span>: <span style="color:var(--green);">"Fever for 3 days"</span>,
+  <span style="color:var(--pink);">"vitals"</span>: { <span style="color:var(--pink);">"temperature"</span>: <span style="color:var(--green);">"101&deg;F"</span> },
+  <span style="color:var(--pink);">"medications"</span>: [{ <span style="color:var(--pink);">"brand"</span>: <span style="color:var(--green);">"Crocin"</span>, <span style="color:var(--pink);">"generic"</span>: <span style="color:var(--green);">"Paracetamol"</span> }]
+<span style="color:var(--accent-light);">}</span></div>
+      <div class="cols-2 mt-32">
+        <div class="card">
+          <h3 class="amber">17+ Indian Drug Mappings</h3>
+          <p>Crocin &rarr; Paracetamol &bull; Combiflam &rarr; Ibuprofen+Paracetamol &bull; Dolo &rarr; Paracetamol &bull; Ecosprin &rarr; Aspirin &bull; Shelcal &rarr; Calcium &bull; and more</p>
+        </div>
+        <div class="card">
+          <h3 class="amber">Colloquial Understanding</h3>
+          <p>"Pet mein dard" &rarr; Abdominal Pain &bull; "Sir dard" &rarr; Headache &bull; "Chakkar aa raha hai" &rarr; Dizziness &bull; Handles terse doctor dictation</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 6: Clinical Safety Engine -->
+  <section class="slide">
+    <div class="max-w w-full center">
+      <h2><span class="red">Differentiator 2</span><br>Clinical Safety Engine</h2>
+      <div class="cols-2 mt-32" style="align-items:start;">
+        <div class="left">
+          <ul class="bullets">
+            <li><strong class="white">Drug Interaction Detection</strong> &mdash; 15 rules covering NSAIDs, anticoagulants, ACE inhibitors, and more</li>
+            <li><strong class="white">Allergy Cross-Reactivity</strong> &mdash; penicillin/cephalosporin, NSAID, sulfonamide groups</li>
+            <li><strong class="white">Dosage Validation</strong> &mdash; 10+ checks for common medications against standard ranges</li>
+            <li class="mt-16"><strong class="white" style="font-size:24px;">Example catch:</strong> <span class="red">Ecosprin + Combiflam</span> = dual NSAID interaction detected <strong class="white">LIVE</strong> during consultation</li>
+          </ul>
+        </div>
+        <div class="flex flex-col items-center">
+          <div class="card center" style="max-width:300px;">
+            <p class="muted mb-8" style="font-size:18px;text-transform:uppercase;letter-spacing:2px;">Patient Safety Score</p>
+            <div class="score-ring">100</div>
+            <p class="green bold" style="font-size:22px;">Excellent</p>
+            <p class="muted mt-8" style="font-size:16px;">No interactions detected<br>All dosages within range</p>
+          </div>
+          <div class="badge-row mt-16" style="justify-content:center;">
+            <span class="badge badge-red">Critical</span>
+            <span class="badge badge-amber">Warning</span>
+            <span class="badge badge-blue">Info</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 7: ABDM/FHIR R4 Compliance -->
+  <section class="slide">
+    <div class="max-w w-full center">
+      <h2><span class="violet">Differentiator 3</span><br>ABDM / FHIR R4 Compliance</h2>
+      <p class="subtitle">India's first ambient scribe aligned with Ayushman Bharat Digital Mission</p>
+      <div class="cols-2 mt-32" style="align-items:start;">
+        <div class="left">
+          <h3 class="white mb-16">8 FHIR R4 Resource Types</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="badge badge-violet" style="text-align:center;">Patient</div>
+            <div class="badge badge-blue" style="text-align:center;">Encounter</div>
+            <div class="badge badge-amber" style="text-align:center;">Condition</div>
+            <div class="badge badge-green" style="text-align:center;">Observation</div>
+            <div class="badge" style="background:rgba(236,72,153,0.2);color:var(--pink);text-align:center;">MedicationRequest</div>
+            <div class="badge badge-red" style="text-align:center;">AllergyIntolerance</div>
+            <div class="badge badge-blue" style="text-align:center;">CarePlan</div>
+            <div class="badge badge-green" style="text-align:center;">ServiceRequest</div>
+          </div>
+          <div class="mt-24">
+            <p style="font-size:22px;"><strong class="white">Quality Scoring:</strong> Grade A&ndash;D based on completeness, coding, and inter-resource references</p>
+          </div>
+        </div>
+        <div class="card left">
+          <h3 class="white">Coding Systems</h3>
+          <ul class="bullets">
+            <li><strong class="accent">ICD-10</strong> &mdash; Diagnosis codes</li>
+            <li><strong class="green">SNOMED CT</strong> &mdash; Clinical findings</li>
+            <li><strong class="amber">LOINC</strong> &mdash; Lab &amp; vitals</li>
+            <li><strong class="pink">RxNorm</strong> &mdash; Medications</li>
+          </ul>
+          <div class="divider" style="margin:20px 0;"></div>
+          <p style="font-size:20px;"><strong class="violet">ABHA Health ID</strong> linkage ready &mdash; not just documentation, <em>interoperable health records</em></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 8: Specialty SOAP Templates -->
+  <section class="slide">
+    <div class="max-w w-full center">
+      <h2>Specialty <span class="accent">SOAP Templates</span></h2>
+      <p class="subtitle">Same AI, specialty-specific intelligence</p>
+      <div class="specialty-grid mt-32">
+        <div class="spec-card">
+          <div class="spec-icon">&#129658;</div>
+          <h4 class="white">General</h4>
+          <p>Standard SOAP with vitals, symptoms, differential</p>
+        </div>
+        <div class="spec-card">
+          <div class="spec-icon">&#10084;&#65039;</div>
+          <h4 class="white">Cardiology</h4>
+          <p>Chest pain OPQRST, EF, cardiac risk stratification</p>
+        </div>
+        <div class="spec-card">
+          <div class="spec-icon">&#128137;</div>
+          <h4 class="white">Diabetology</h4>
+          <p>HbA1c tracking, insulin regimen, foot exam</p>
+        </div>
+        <div class="spec-card">
+          <div class="spec-icon">&#128118;</div>
+          <h4 class="white">Pediatrics</h4>
+          <p>Growth percentiles, vaccination, developmental milestones</p>
+        </div>
+        <div class="spec-card">
+          <div class="spec-icon">&#129504;</div>
+          <h4 class="white">Psychiatry</h4>
+          <p>PHQ-9, GAD-7, mental status exam, risk assessment</p>
+        </div>
+        <div class="spec-card">
+          <div class="spec-icon">&#129471;</div>
+          <h4 class="white">Orthopedics</h4>
+          <p>ROM assessment, fracture classification, rehab plan</p>
+        </div>
+      </div>
+      <p class="mt-32" style="font-size:24px;">Each specialty extracts <strong class="white">domain-specific fields</strong> automatically from conversation</p>
+    </div>
+  </section>
+
+  <!-- SLIDE 9: Continuous Learning + Clinical Nudges -->
+  <section class="slide">
+    <div class="max-w w-full center">
+      <h2>Continuous <span class="green">Learning</span></h2>
+      <p class="subtitle">The system improves with every consultation</p>
+      <div class="cols-2 mt-32" style="align-items:start;">
+        <div class="card left">
+          <div class="icon-circle ic-green"><span style="font-size:28px;">&#128218;</span></div>
+          <h3 class="green">"Save &amp; Teach AI"</h3>
+          <ul class="bullets">
+            <li>Doctor edits the extracted clinical note</li>
+            <li>Corrections stored as <strong class="white">few-shot examples</strong></li>
+            <li>Injected into next extraction prompt</li>
+            <li><strong class="white">No model retraining needed</strong> &mdash; prompt-level learning</li>
+          </ul>
+        </div>
+        <div class="card left">
+          <div class="icon-circle ic-amber"><span style="font-size:28px;">&#128161;</span></div>
+          <h3 class="amber">Clinical Nudges</h3>
+          <ul class="bullets">
+            <li>AI prompts doctor for <strong class="white">missing history</strong></li>
+            <li>13 evidence-based nudge rules</li>
+            <li>"Chest pain mentioned &mdash; ask about onset, radiation, severity"</li>
+            <li>Reduces documentation gaps</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 10: Technology Architecture -->
+  <section class="slide">
+    <div class="max-w w-full center">
+      <h2>Technology <span class="accent">Architecture</span></h2>
+      <div class="arch-diagram mt-24">
+<span style="color:var(--accent-light);">Frontend (React 18 PWA + Vite)</span>
+    &#9474;
+    &#9474; WebSocket (real-time bi-directional)
+    &#9660;
+<span style="color:var(--green);">Backend (Python FastAPI)</span>
+    &#9500;&#9472;&#9472; <span style="color:var(--amber);">Gemini 2.5 Flash</span> (clinical extraction + differential Dx)
+    &#9500;&#9472;&#9472; <span style="color:var(--violet);">FHIR R4 Mapper</span> (8 resource types + quality scoring)
+    &#9500;&#9472;&#9472; <span style="color:var(--red);">CDS Engine</span> (drug interaction + allergy + dosage)
+    &#9492;&#9472;&#9472; <span style="color:var(--pink);">Learning Service</span> (few-shot correction injection)</div>
+      <div class="cols-2 mt-32" style="gap:24px;">
+        <div class="card">
+          <h3 class="white" style="font-size:20px;">Stack</h3>
+          <div class="badge-row">
+            <span class="badge badge-blue">React 18</span>
+            <span class="badge badge-green">FastAPI</span>
+            <span class="badge badge-amber">Gemini 2.5 Flash</span>
+            <span class="badge badge-violet">Web Speech API</span>
+            <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--text);">Tailwind CSS</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="white" style="font-size:20px;">Production Ready</h3>
+          <div class="badge-row">
+            <span class="badge badge-green">AES-256 Encryption</span>
+            <span class="badge badge-blue">PWA Installable</span>
+            <span class="badge badge-amber">Docker Ready</span>
+            <span class="badge badge-red">Security Headers</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 11: Mobile-First PWA -->
+  <section class="slide">
+    <div class="max-w w-full center">
+      <h2>Mobile-First <span class="accent">PWA</span></h2>
+      <p class="subtitle">Install on any phone &mdash; no app store needed</p>
+      <div class="two-col mt-32">
+        <div class="left">
+          <ul class="bullets">
+            <li><strong class="white">Installable</strong> &mdash; Add to Home Screen, launches like a native app</li>
+            <li><strong class="white">Offline UI</strong> &mdash; service worker caches app shell</li>
+            <li><strong class="white">Responsive</strong> &mdash; designed for 375px mobile first, scales to desktop</li>
+            <li><strong class="white">Cross-platform</strong> &mdash; Chrome/Edge on Android, Safari on iOS</li>
+            <li><strong class="white">Push-ready</strong> &mdash; notification infrastructure in place</li>
+          </ul>
+          <div class="badge-row mt-24">
+            <span class="badge badge-green">Service Worker</span>
+            <span class="badge badge-blue">Web Manifest</span>
+            <span class="badge badge-amber">Responsive</span>
+          </div>
+        </div>
+        <div>
+          <img src="screenshots/01-hero-desktop.png" alt="MedScribe AI Responsive View" class="screenshot" style="max-width:480px;">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 12: Impact & Future -->
+  <section class="slide slide-thankyou center">
+    <div>
+      <h2>Impact &amp; <span class="green">Future</span></h2>
+      <div class="cols-3 mt-32" style="max-width:900px;margin-left:auto;margin-right:auto;">
+        <div class="card center">
+          <div class="big-stat" style="color:var(--green);">13x</div>
+          <p><strong class="white">Faster</strong><br>~10 min manual &rarr; ~45 sec</p>
+        </div>
+        <div class="card center">
+          <div class="big-stat accent">8</div>
+          <p><strong class="white">FHIR Resources</strong><br>per consultation</p>
+        </div>
+        <div class="card center">
+          <div class="big-stat amber">15+</div>
+          <p><strong class="white">Safety Rules</strong><br>drug &amp; allergy checks</p>
+        </div>
+      </div>
+      <div class="divider mt-48"></div>
+      <h3 class="mt-24" style="font-size:28px;">Roadmap</h3>
+      <div class="badge-row mt-16" style="justify-content:center;">
+        <span class="badge badge-blue">EHR Integration</span>
+        <span class="badge badge-green">Multi-Doctor Support</span>
+        <span class="badge badge-amber">Tamil, Telugu, Bengali</span>
+        <span class="badge badge-violet">ABDM Production Cert</span>
+      </div>
+      <div class="divider mt-48"></div>
+      <h1 style="font-size:52px;margin-top:24px;">Built for <span class="accent">Bharat's</span> Healthcare Future</h1>
+      <p class="muted mt-16" style="font-size:22px;">Thank you &nbsp;&bull;&nbsp; Akash &nbsp;&bull;&nbsp; Team MedVani &nbsp;&bull;&nbsp; HACKMATRIX 2.0</p>
+      <p class="muted mt-8" style="font-size:18px;">github.com/your-repo/medscribe-ai</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const deck = document.getElementById('deck');
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  function goTo(n) {
+    current = Math.max(0, Math.min(n, total - 1));
+    deck.style.transform = `translateX(-${current * 100}vw)`;
+    counter.textContent = `${current + 1} / ${total}`;
+    progress.style.width = `${((current + 1) / total) * 100}%`;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+      e.preventDefault();
+      goTo(current + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      e.preventDefault();
+      goTo(current - 1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      goTo(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      goTo(total - 1);
+    }
+  });
+
+  // Click navigation: left third goes back, right two-thirds goes forward
+  document.addEventListener('click', (e) => {
+    if (e.clientX < window.innerWidth / 3) {
+      goTo(current - 1);
+    } else {
+      goTo(current + 1);
+    }
+  });
+
+  // Touch swipe support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      diff > 0 ? goTo(current + 1) : goTo(current - 1);
+    }
+  });
+
+  goTo(0);
+</script>
+</body>
+</html>

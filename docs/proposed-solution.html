@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedScribe AI — HACKMATRIX 2.0 Proposal</title>
+<style>
+  /* ── Reset & Base ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue: #2563EB;
+    --blue-light: #DBEAFE;
+    --blue-dark: #1E40AF;
+    --slate-900: #0F172A;
+    --slate-700: #334155;
+    --slate-500: #64748B;
+    --slate-200: #E2E8F0;
+    --slate-50: #F8FAFC;
+    --emerald: #10B981;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --violet: #8B5CF6;
+  }
+
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+
+  html, body {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: var(--slate-900);
+    background: #fff;
+  }
+
+  /* ── Page structure ───────────────────────────────────────── */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 2cm;
+    margin: 0 auto 2mm auto;
+    background: #fff;
+    position: relative;
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--blue);
+    padding-bottom: 8px;
+    margin-bottom: 28px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 9pt;
+    color: var(--slate-500);
+  }
+
+  .page-footer {
+    position: absolute;
+    bottom: 2cm;
+    left: 2cm;
+    right: 2cm;
+    text-align: center;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 8pt;
+    color: var(--slate-500);
+    border-top: 1px solid var(--slate-200);
+    padding-top: 6px;
+  }
+
+  /* ── Typography ───────────────────────────────────────────── */
+  h1, h2, h3, h4 {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--slate-900);
+    line-height: 1.3;
+  }
+
+  h2 {
+    font-size: 16pt;
+    color: var(--blue);
+    border-bottom: 2px solid var(--blue-light);
+    padding-bottom: 6px;
+    margin-bottom: 16px;
+    margin-top: 4px;
+  }
+
+  h3 {
+    font-size: 12pt;
+    color: var(--blue-dark);
+    margin-top: 18px;
+    margin-bottom: 8px;
+  }
+
+  p {
+    margin-bottom: 10px;
+    text-align: justify;
+  }
+
+  strong { color: var(--slate-900); }
+
+  ul, ol {
+    margin-left: 20px;
+    margin-bottom: 10px;
+  }
+
+  li { margin-bottom: 4px; }
+
+  /* ── Cover page ───────────────────────────────────────────── */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    min-height: calc(297mm - 4cm);
+  }
+
+  .cover-icon {
+    font-size: 72pt;
+    margin-bottom: 12px;
+    filter: grayscale(20%);
+  }
+
+  .cover-title {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 36pt;
+    font-weight: 800;
+    color: var(--blue);
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+
+  .cover-subtitle {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 13pt;
+    font-weight: 400;
+    color: var(--slate-700);
+    max-width: 420px;
+    line-height: 1.5;
+    margin-bottom: 40px;
+  }
+
+  .cover-meta {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 10pt;
+    color: var(--slate-500);
+    line-height: 2;
+  }
+
+  .cover-meta .label {
+    font-weight: 600;
+    color: var(--slate-700);
+  }
+
+  .cover-badge {
+    display: inline-block;
+    margin-top: 32px;
+    padding: 8px 28px;
+    border: 2px solid var(--blue);
+    border-radius: 6px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 10pt;
+    font-weight: 600;
+    color: var(--blue);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .cover-line {
+    width: 80px;
+    height: 3px;
+    background: var(--blue);
+    margin: 24px auto;
+    border-radius: 2px;
+  }
+
+  /* ── Architecture diagram ─────────────────────────────────── */
+  .arch-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 20px 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 8.5pt;
+  }
+
+  .arch-box {
+    border: 2px solid var(--blue);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: center;
+    background: var(--slate-50);
+    min-width: 140px;
+  }
+
+  .arch-box .arch-title {
+    font-weight: 700;
+    color: var(--blue);
+    font-size: 9pt;
+    margin-bottom: 6px;
+  }
+
+  .arch-box .arch-detail {
+    color: var(--slate-700);
+    font-size: 8pt;
+    line-height: 1.4;
+  }
+
+  .arch-arrow {
+    font-size: 18pt;
+    color: var(--blue);
+    padding: 0 6px;
+    font-weight: 700;
+  }
+
+  /* ── Tables ───────────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 9pt;
+    margin: 14px 0;
+  }
+
+  thead th {
+    background: var(--blue);
+    color: #fff;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 8.5pt;
+  }
+
+  thead th:first-child { border-radius: 4px 0 0 0; }
+  thead th:last-child { border-radius: 0 4px 0 0; }
+
+  tbody td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--slate-200);
+    vertical-align: top;
+  }
+
+  tbody tr:nth-child(even) { background: var(--slate-50); }
+
+  /* ── Feature grid ─────────────────────────────────────────── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+
+  .feature-card {
+    border: 1px solid var(--slate-200);
+    border-left: 4px solid var(--blue);
+    border-radius: 6px;
+    padding: 14px 16px;
+    background: #fff;
+  }
+
+  .feature-card .feature-num {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 8pt;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .feature-card h4 {
+    font-size: 10.5pt;
+    margin-bottom: 5px;
+    color: var(--slate-900);
+  }
+
+  .feature-card p {
+    font-size: 9pt;
+    color: var(--slate-700);
+    margin-bottom: 0;
+    text-align: left;
+    line-height: 1.45;
+  }
+
+  .feature-icon {
+    float: left;
+    font-size: 18pt;
+    margin-right: 10px;
+    margin-top: 2px;
+  }
+
+  /* ── Impact metrics ───────────────────────────────────────── */
+  .metrics-row {
+    display: flex;
+    gap: 14px;
+    margin: 18px 0;
+  }
+
+  .metric-box {
+    flex: 1;
+    text-align: center;
+    padding: 16px 10px;
+    border: 1px solid var(--slate-200);
+    border-radius: 8px;
+    background: var(--slate-50);
+  }
+
+  .metric-box .metric-value {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 22pt;
+    font-weight: 800;
+    color: var(--blue);
+  }
+
+  .metric-box .metric-label {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 8pt;
+    color: var(--slate-500);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Roadmap timeline ─────────────────────────────────────── */
+  .timeline {
+    border-left: 3px solid var(--blue);
+    margin-left: 12px;
+    padding-left: 20px;
+  }
+
+  .timeline-item {
+    margin-bottom: 14px;
+    position: relative;
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -26px;
+    top: 6px;
+    width: 10px;
+    height: 10px;
+    background: var(--blue);
+    border-radius: 50%;
+    border: 2px solid #fff;
+  }
+
+  .timeline-item .timeline-phase {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 8pt;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .timeline-item h4 {
+    font-size: 10pt;
+    margin: 2px 0 3px 0;
+  }
+
+  .timeline-item p {
+    font-size: 9pt;
+    color: var(--slate-700);
+    margin-bottom: 0;
+    text-align: left;
+  }
+
+  /* ── Code blocks ──────────────────────────────────────────── */
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 9pt;
+    background: var(--slate-50);
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: 1px solid var(--slate-200);
+  }
+
+  .cmd-block {
+    background: var(--slate-900);
+    color: #E2E8F0;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 9pt;
+    margin: 10px 0;
+    line-height: 1.7;
+  }
+
+  .cmd-block .prompt { color: var(--emerald); }
+  .cmd-block .comment { color: var(--slate-500); }
+
+  /* ── Utility ──────────────────────────────────────────────── */
+  .text-blue { color: var(--blue); }
+  .text-sm {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 9pt;
+    color: var(--slate-700);
+  }
+  .mt-4 { margin-top: 16px; }
+  .mb-2 { margin-bottom: 8px; }
+  .check { color: var(--emerald); }
+  .cross { color: var(--red); }
+  .partial { color: var(--amber); }
+
+  /* ── Print styles ─────────────────────────────────────────── */
+  @media print {
+    html, body {
+      width: 210mm;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page {
+      width: auto;
+      min-height: auto;
+      padding: 0;
+      margin: 0;
+      box-shadow: none;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    .no-break {
+      page-break-inside: avoid;
+    }
+
+    .page-footer {
+      position: fixed;
+      bottom: 0;
+      left: 2cm;
+      right: 2cm;
+    }
+
+    .page-header {
+      /* Let @page handle headers in print */
+    }
+
+    /* Hide screen-only elements */
+    .screen-only { display: none; }
+  }
+
+  /* ── Screen preview ───────────────────────────────────────── */
+  @media screen {
+    body {
+      background: #94a3b8;
+      padding: 20px;
+    }
+
+    .page {
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+      margin-bottom: 20px;
+      border-radius: 2px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 1: COVER
+     ════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="cover">
+    <div class="cover-icon">&#9877;</div>
+    <div class="cover-title">MedScribe AI</div>
+    <div class="cover-subtitle">
+      Mobile-First Ambient AI Scribe<br>
+      with Real-Time FHIR Conversion
+    </div>
+    <div class="cover-line"></div>
+    <div class="cover-meta">
+      <span class="label">Problem Statement:</span> PS-1<br>
+      <span class="label">Hackathon:</span> HACKMATRIX 2.0<br>
+      <span class="label">Organized by:</span> Jilo Health &times; NJACK, IIT Patna<br>
+      <span class="label">Date:</span> March 2026
+    </div>
+    <div class="cover-badge">Proposed Solution</div>
+  </div>
+  <div class="page-footer">MedScribe AI &mdash; HACKMATRIX 2.0 &nbsp;&middot;&nbsp; Page 1</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 2: PROBLEM & SOLUTION
+     ════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="page-header">
+    <span>MedScribe AI &mdash; HACKMATRIX 2.0</span>
+    <span>Proposed Solution</span>
+  </div>
+
+  <h2>The Problem</h2>
+
+  <p>
+    India's healthcare system serves over 1.4 billion people, yet its clinical workforce remains
+    critically understaffed. The doctor-to-patient ratio stands at roughly 1:1,000, well below the
+    WHO recommendation of 1:1,000 in urban areas and far worse in rural settings. In this
+    high-pressure environment, physicians spend an estimated <strong>2&ndash;3 hours every day</strong>
+    on clinical documentation&mdash;writing case notes, filling discharge summaries, coding diagnoses,
+    and preparing referral letters. This administrative burden directly reduces the time available
+    for patient care, accelerates burnout, and contributes to India's growing physician attrition crisis.
+  </p>
+
+  <p>
+    Compounding the problem is India's unique linguistic landscape. Doctor-patient conversations
+    routinely occur in <strong>Hindi-English code-mixed speech</strong>&mdash;a patient might describe
+    their symptoms as <em>"pet mein dard ho raha hai, 3 din se fever bhi hai"</em> while the doctor
+    responds with clinical English interspersed with Hindi reassurances. Global ambient scribe tools
+    (Abridge, Nuance DAX, Suki) are built for monolingual English clinical settings and
+    <strong>fail catastrophically</strong> on code-mixed Indian conversations. Meanwhile, India's
+    ambitious <strong>Ayushman Bharat Digital Mission (ABDM)</strong> mandates FHIR-compliant health
+    records for interoperability, yet no affordable tool exists that can convert a spoken consultation
+    into standards-compliant digital records. Rural telemedicine expansion&mdash;a national priority&mdash;remains
+    bottlenecked by the documentation overhead imposed on already-overstretched physicians.
+  </p>
+
+  <h2>Our Solution</h2>
+
+  <p>
+    <strong>MedScribe AI</strong> is a mobile-first Progressive Web App that transforms spoken
+    doctor-patient conversations into structured clinical notes and FHIR R4&ndash;compliant resources
+    in real time. The workflow is radically simple: a doctor opens the app on their phone, taps a
+    single record button, and speaks naturally with their patient in any mix of Hindi and English.
+    As the conversation flows, MedScribe AI streams a live transcript while simultaneously extracting
+    chief complaints, diagnoses with ICD-10 codes, medications with dosage and RxNorm mappings,
+    vitals coded to LOINC, allergies, and a structured SOAP note&mdash;all updated incrementally on screen.
+  </p>
+
+  <p>
+    What sets MedScribe AI apart is the integration of <strong>Clinical Decision Support</strong> directly
+    into the documentation pipeline. As medications and allergies are extracted, the system checks for
+    drug-drug interactions, allergy cross-reactivity, and dosage safety&mdash;raising real-time alerts
+    before the prescription is finalized. A <strong>Differential Diagnosis Engine</strong> suggests
+    alternative diagnoses with supporting evidence and distinguishing tests. Every consultation produces
+    a scored FHIR R4 Bundle (Grade A&ndash;D) ready for ABDM integration, complete with Patient, Encounter,
+    Condition, Observation, MedicationRequest, AllergyIntolerance, CarePlan, and ServiceRequest resources.
+    The system learns continuously: when a doctor corrects an extraction, that correction is stored and
+    injected as a few-shot example into future calls, improving accuracy without model retraining.
+    <strong>Zero API cost for speech recognition</strong>&mdash;we leverage the browser's native Web Speech
+    API&mdash;makes this viable even in resource-constrained settings.
+  </p>
+
+  <div class="page-footer">MedScribe AI &mdash; HACKMATRIX 2.0 &nbsp;&middot;&nbsp; Page 2</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 3: ARCHITECTURE & TECHNOLOGY
+     ════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="page-header">
+    <span>MedScribe AI &mdash; HACKMATRIX 2.0</span>
+    <span>Architecture &amp; Technology</span>
+  </div>
+
+  <h2>System Architecture</h2>
+
+  <div class="arch-diagram">
+    <div class="arch-box" style="border-color: var(--emerald);">
+      <div class="arch-title" style="color: var(--emerald);">Frontend (PWA)</div>
+      <div class="arch-detail">
+        React 18 + Vite<br>
+        Tailwind CSS<br>
+        Web Speech API<br>
+        Mobile-First UI
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 4px;">
+      <span class="arch-arrow">&rarr;</span>
+      <span style="font-size:7pt; color: var(--slate-500); font-family: 'Inter',system-ui,sans-serif;">WebSocket</span>
+      <span class="arch-arrow">&larr;</span>
+    </div>
+    <div class="arch-box">
+      <div class="arch-title">Backend (API)</div>
+      <div class="arch-detail">
+        Python FastAPI<br>
+        WebSocket Manager<br>
+        CDS Engine<br>
+        Learning Service
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 4px;">
+      <span class="arch-arrow">&rarr;</span>
+      <span style="font-size:7pt; color: var(--slate-500); font-family: 'Inter',system-ui,sans-serif;">REST</span>
+      <span class="arch-arrow">&larr;</span>
+    </div>
+    <div class="arch-box" style="border-color: var(--violet);">
+      <div class="arch-title" style="color: var(--violet);">AI &amp; FHIR Layer</div>
+      <div class="arch-detail">
+        Gemini 2.5 Flash<br>
+        Clinical Extraction<br>
+        FHIR R4 Mapper<br>
+        Quality Scoring
+      </div>
+    </div>
+  </div>
+
+  <h3>Data Flow</h3>
+  <p>
+    The browser captures speech via the Web Speech API (supporting Hindi + English), streams
+    recognized text over a WebSocket to the FastAPI backend. Accumulated transcript segments
+    are batched every 10&ndash;15 seconds and sent to Gemini 2.5 Flash with a structured clinical
+    extraction prompt. The AI returns structured JSON which is mapped to FHIR R4 resources,
+    scored for completeness, and run through the CDS engine for safety checks. All results
+    stream back to the frontend over the same WebSocket connection.
+  </p>
+
+  <h3>Technology Stack</h3>
+  <table>
+    <thead>
+      <tr><th>Layer</th><th>Technology</th><th>Rationale</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Frontend</td><td>React 18, Vite, Tailwind CSS</td><td>PWA-capable, fast HMR, mobile-first utility CSS</td></tr>
+      <tr><td>Speech-to-Text</td><td>Web Speech API (browser-native)</td><td>Zero API cost, Hindi-English support, no latency</td></tr>
+      <tr><td>Backend</td><td>Python FastAPI + WebSocket</td><td>Async-native, auto-docs, WebSocket first-class</td></tr>
+      <tr><td>AI Extraction</td><td>Google Gemini 2.5 Flash</td><td>Fast structured output, code-mixed understanding</td></tr>
+      <tr><td>FHIR Mapping</td><td>Custom Python + Pydantic models</td><td>Type-safe R4 resource generation with validation</td></tr>
+      <tr><td>CDS Engine</td><td>Rule-based Python service</td><td>Deterministic safety checks, no AI hallucination risk</td></tr>
+      <tr><td>Terminology</td><td>ICD-10, SNOMED CT, RxNorm, LOINC</td><td>International coding standards, ABDM alignment</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Security &amp; Privacy Considerations</h3>
+  <ul>
+    <li>Speech processed in-browser&mdash;raw audio never leaves the device</li>
+    <li>WebSocket connection scoped to session; no persistent patient data stored on server</li>
+    <li>FHIR resources generated on-demand, exportable as local JSON files</li>
+    <li>No patient identifiers stored in correction/learning data</li>
+    <li>PWA supports offline-capable UI shell via service worker caching</li>
+  </ul>
+
+  <div class="page-footer">MedScribe AI &mdash; HACKMATRIX 2.0 &nbsp;&middot;&nbsp; Page 3</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 4: KEY FEATURES
+     ════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="page-header">
+    <span>MedScribe AI &mdash; HACKMATRIX 2.0</span>
+    <span>Key Features</span>
+  </div>
+
+  <h2>Key Features</h2>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-num">Feature 01</div>
+      <h4>Hindi-English Code-Mixed Understanding</h4>
+      <p>
+        Natively handles conversations where doctors and patients switch freely between Hindi and
+        English. Extracts clinical entities from phrases like <em>"pet mein dard"</em> (abdominal pain)
+        and maps Indian drug brand names (Crocin, Combiflam) to their generic equivalents with
+        correct RxNorm codes.
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-num">Feature 02</div>
+      <h4>Clinical Decision Support (CDS)</h4>
+      <p>
+        Real-time safety engine with <strong>10 drug-drug interaction rules</strong>, <strong>3 allergy
+        cross-reactivity checks</strong>, and <strong>10 dosage validation rules</strong>. Catches
+        dangerous combinations (e.g., Warfarin + Aspirin, NSAID in renal impairment) before the
+        prescription is finalized. Severity-graded alerts (high / moderate / low).
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-num">Feature 03</div>
+      <h4>FHIR R4 + ABDM Compliance</h4>
+      <p>
+        Generates a complete FHIR R4 Bundle with <strong>8 resource types</strong>: Patient, Encounter,
+        Condition (ICD-10), Observation (LOINC), MedicationRequest (RxNorm), AllergyIntolerance,
+        CarePlan, and ServiceRequest. Each resource is quality-scored (Grade A&ndash;D) for coding
+        completeness and inter-resource referential integrity.
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-num">Feature 04</div>
+      <h4>Differential Diagnosis Engine</h4>
+      <p>
+        For every primary diagnosis, the AI suggests <strong>2&ndash;3 alternative diagnoses</strong>
+        with supporting evidence extracted from the conversation and recommended distinguishing tests.
+        Helps doctors consider conditions they might overlook, supporting diagnostic rigor and
+        reducing misdiagnosis rates.
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-num">Feature 05</div>
+      <h4>Continuous Learning from Corrections</h4>
+      <p>
+        Doctors can edit any extracted clinical note field and click <strong>"Save &amp; Teach AI."</strong>
+        Corrections are stored and injected as few-shot examples into future Gemini extraction calls.
+        The system improves with use&mdash;no model fine-tuning or retraining required. Accuracy
+        compounds across consultations.
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-num">Feature 06</div>
+      <h4>Export Suite &amp; Demo Mode</h4>
+      <p>
+        One-click export to <strong>print-ready clinical notes</strong> (opens browser print dialog),
+        <strong>FHIR Bundle JSON download</strong>, and <strong>clipboard copy</strong>. Built-in demo
+        mode with 3 pre-loaded scenarios (Viral Fever, Diabetes Follow-Up, Cardiac + Safety Alerts)
+        ensures reliable presentations even without live microphone access.
+      </p>
+    </div>
+  </div>
+
+  <h3>Additional Capabilities</h3>
+  <table>
+    <thead>
+      <tr><th>Capability</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>FHIR Quality Scoring</td><td>Automated Grade A&ndash;D scoring checking resource completeness, coding systems, and cross-references</td></tr>
+      <tr><td>Risk Factors &amp; Tests</td><td>AI identifies patient risk factors and suggests appropriate diagnostic tests</td></tr>
+      <tr><td>Dark Mode</td><td>Full dark theme support for low-light clinical environments (night shifts, ICU)</td></tr>
+      <tr><td>PWA Install</td><td>Installable on mobile home screen; offline UI shell via service worker</td></tr>
+      <tr><td>Real-Time Streaming</td><td>WebSocket-based incremental updates; transcript + note + FHIR update simultaneously</td></tr>
+      <tr><td>Toast Notifications</td><td>Non-blocking alerts for CDS warnings, extraction status, and connection state</td></tr>
+    </tbody>
+  </table>
+
+  <div class="page-footer">MedScribe AI &mdash; HACKMATRIX 2.0 &nbsp;&middot;&nbsp; Page 4</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 5: DIFFERENTIATORS & IMPACT
+     ════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="page-header">
+    <span>MedScribe AI &mdash; HACKMATRIX 2.0</span>
+    <span>Differentiators &amp; Impact</span>
+  </div>
+
+  <h2>Competitive Differentiation</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Capability</th>
+        <th>MedScribe AI</th>
+        <th>Abridge</th>
+        <th>Nuance DAX</th>
+        <th>Suki AI</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Hindi-English Code-Mixed</strong></td>
+        <td><span class="check">&#10004;</span> Native</td>
+        <td><span class="cross">&#10008;</span> English only</td>
+        <td><span class="cross">&#10008;</span> English only</td>
+        <td><span class="cross">&#10008;</span> English only</td>
+      </tr>
+      <tr>
+        <td><strong>ABDM / FHIR R4 Alignment</strong></td>
+        <td><span class="check">&#10004;</span> Full R4 Bundle</td>
+        <td><span class="partial">&#9679;</span> Partial</td>
+        <td><span class="partial">&#9679;</span> Via Epic</td>
+        <td><span class="partial">&#9679;</span> Partial</td>
+      </tr>
+      <tr>
+        <td><strong>Clinical Decision Support</strong></td>
+        <td><span class="check">&#10004;</span> Built-in CDS</td>
+        <td><span class="cross">&#10008;</span> None</td>
+        <td><span class="cross">&#10008;</span> External</td>
+        <td><span class="cross">&#10008;</span> None</td>
+      </tr>
+      <tr>
+        <td><strong>Indian Drug Brand Mapping</strong></td>
+        <td><span class="check">&#10004;</span> Crocin &rarr; Paracetamol</td>
+        <td><span class="cross">&#10008;</span></td>
+        <td><span class="cross">&#10008;</span></td>
+        <td><span class="cross">&#10008;</span></td>
+      </tr>
+      <tr>
+        <td><strong>Differential Diagnosis</strong></td>
+        <td><span class="check">&#10004;</span> With evidence</td>
+        <td><span class="cross">&#10008;</span></td>
+        <td><span class="cross">&#10008;</span></td>
+        <td><span class="partial">&#9679;</span> Basic</td>
+      </tr>
+      <tr>
+        <td><strong>Speech API Cost</strong></td>
+        <td><span class="check">&#10004;</span> $0 (browser-native)</td>
+        <td>Proprietary</td>
+        <td>Proprietary</td>
+        <td>Proprietary</td>
+      </tr>
+      <tr>
+        <td><strong>Continuous Learning</strong></td>
+        <td><span class="check">&#10004;</span> Few-shot injection</td>
+        <td><span class="cross">&#10008;</span></td>
+        <td><span class="cross">&#10008;</span></td>
+        <td><span class="cross">&#10008;</span></td>
+      </tr>
+      <tr>
+        <td><strong>Pricing (India)</strong></td>
+        <td>Open source / Free</td>
+        <td>~$1,000/mo</td>
+        <td>~$1,500/mo</td>
+        <td>~$400/mo</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Impact Metrics</h2>
+
+  <div class="metrics-row">
+    <div class="metric-box">
+      <div class="metric-value">13&times;</div>
+      <div class="metric-label">Faster<br>Documentation</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-value">$0</div>
+      <div class="metric-label">Speech API<br>Cost</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-value">23</div>
+      <div class="metric-label">Safety Rules<br>(CDS Engine)</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-value">8</div>
+      <div class="metric-label">FHIR R4<br>Resource Types</div>
+    </div>
+  </div>
+
+  <h3>Projected Clinical Impact</h3>
+  <ul>
+    <li><strong>Time savings:</strong> Reduces documentation time from ~15 minutes to ~1 minute per consultation,
+      freeing 2+ hours/day for direct patient care.</li>
+    <li><strong>Patient safety:</strong> Real-time CDS catches dangerous drug interactions and allergy
+      cross-reactivity before prescriptions are finalized&mdash;errors that manual review often misses
+      under time pressure.</li>
+    <li><strong>Digital health readiness:</strong> Automatic FHIR R4 output means every consultation is
+      ABDM-ready from day one, accelerating India's health record interoperability goals.</li>
+    <li><strong>Equity:</strong> Browser-native speech recognition with zero API cost makes ambient
+      scribing accessible to small clinics and rural telemedicine setups, not just well-funded hospital
+      chains.</li>
+    <li><strong>Diagnostic quality:</strong> Differential diagnosis suggestions and risk factor identification
+      support clinical reasoning, especially for junior doctors and GPs handling unfamiliar presentations.</li>
+  </ul>
+
+  <div class="page-footer">MedScribe AI &mdash; HACKMATRIX 2.0 &nbsp;&middot;&nbsp; Page 5</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 6: DEMO & ROADMAP
+     ════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="page-header">
+    <span>MedScribe AI &mdash; HACKMATRIX 2.0</span>
+    <span>Demo &amp; Roadmap</span>
+  </div>
+
+  <h2>Live Demo</h2>
+
+  <h3>Available Demo Scenarios</h3>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Scenario</th><th>Highlights</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>Viral Fever (Hindi-English)</td><td>Code-mixed transcript, Crocin &rarr; Paracetamol mapping, ICD-10 coding</td></tr>
+      <tr><td>2</td><td>Diabetes Follow-Up</td><td>Medication review, HbA1c observation, CarePlan with diet instructions</td></tr>
+      <tr><td>3</td><td>Cardiac + Safety Alerts</td><td>Warfarin + Aspirin interaction, allergy cross-reactivity, high-severity CDS</td></tr>
+      <tr><td>4</td><td>Live Microphone</td><td>Real-time recording with actual doctor-patient conversation</td></tr>
+    </tbody>
+  </table>
+
+  <h3>How to Run</h3>
+  <div class="cmd-block">
+    <span class="comment"># Clone and install</span><br>
+    <span class="prompt">$</span> git clone https://github.com/your-org/medscribe-ai.git<br>
+    <span class="prompt">$</span> cd medscribe-ai<br>
+    <span class="prompt">$</span> npm install<br><br>
+    <span class="comment"># Set Gemini API key</span><br>
+    <span class="prompt">$</span> echo "GEMINI_API_KEY=your_key" > backend/.env<br><br>
+    <span class="comment"># Start both frontend and backend</span><br>
+    <span class="prompt">$</span> npm run dev<br><br>
+    <span class="comment"># Open http://localhost:5173 on your phone or browser</span>
+  </div>
+
+  <h2>Future Roadmap</h2>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-phase">Phase 1 &mdash; Now</div>
+      <h4>Hackathon MVP</h4>
+      <p>Hindi-English ambient scribe, FHIR R4 output, CDS engine, differential diagnosis, demo mode, PWA.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-phase">Phase 2 &mdash; Q2 2026</div>
+      <h4>Regional Language Expansion</h4>
+      <p>Add Tamil, Telugu, Bengali, Marathi support. Fine-tune extraction for regional medical terminology and prescription patterns.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-phase">Phase 3 &mdash; Q3 2026</div>
+      <h4>EHR Integration &amp; ABDM Bridge</h4>
+      <p>Direct integration with Indian EHR systems (Bahmni, OpenMRS). ABDM Health Information Provider (HIP) module for national health record exchange.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-phase">Phase 4 &mdash; Q4 2026</div>
+      <h4>Edge Deployment &amp; Offline Mode</h4>
+      <p>On-device AI inference for areas with unreliable internet. Local Whisper model for offline speech recognition. Full offline-first architecture for rural deployment.</p>
+    </div>
+  </div>
+
+  <div style="margin-top: 28px; padding: 16px 20px; border: 1px solid var(--slate-200); border-radius: 8px; background: var(--slate-50);">
+    <h3 style="margin-top: 0; margin-bottom: 6px; font-size: 10pt;">Acknowledgments</h3>
+    <p class="text-sm" style="margin-bottom: 0;">
+      Built solo by <strong>Akash</strong> (Team MedVani) for <strong>HACKMATRIX 2.0</strong> organized by <strong>Jilo Health</strong> and
+      <strong>NJACK, IIT Patna</strong>. Thanks to the organizers for the opportunity to address
+      a critical gap in India's digital health infrastructure. This project is open source and
+      intended to serve the public health ecosystem.
+    </p>
+  </div>
+
+  <div class="page-footer">MedScribe AI &mdash; HACKMATRIX 2.0 &nbsp;&middot;&nbsp; Page 6</div>
+</div>
+
+</body>
+</html>

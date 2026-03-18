@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+venv/
+*.egg-info/
+
+# Environment
+.env
+.env.*
+.env.local
+
+# Build outputs
+dist/
+build/
+.vite/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Testing
+.pytest_cache/
+coverage/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code / AI tooling
+.claude/
+.playwright-mcp/
+CLAUDE.md
+prompt.md
+
+# Generated data
+backend/data/corrections.json
+
+# Screenshots (dev only, root-level temp files)
+/*.png
+!docs/screenshots/*.png
+
+# Logs
+*.log
+npm-debug.log*
