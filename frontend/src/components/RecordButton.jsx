@@ -37,7 +37,7 @@ export default function RecordButton({ isRecording, elapsed, supported, processi
     )
   }
 
-  if (processing) {
+  if (processing && !isRecording) {
     return (
       <div className="flex flex-col items-center gap-4 py-4 sm:py-6">
         <div className="w-[80px] h-[80px] sm:w-[72px] sm:h-[72px] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">

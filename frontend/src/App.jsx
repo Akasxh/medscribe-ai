@@ -19,6 +19,7 @@ import useSafetyScore from './hooks/useSafetyScore'
 import ClinicalNudges from './components/ClinicalNudges'
 import PrescriptionQR from './components/PrescriptionQR'
 import ConsentBanner from './components/ConsentBanner'
+import UserRegistration from './components/UserRegistration'
 import useWebSocket from './hooks/useWebSocket'
 import useAudioRecorder from './hooks/useAudioRecorder'
 import LanguageSelector from './components/LanguageSelector'
@@ -40,7 +41,17 @@ function getOrCreateSessionId() {
   return id
 }
 
+function loadUser() {
+  try {
+    const raw = localStorage.getItem('medscribe_user')
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 export default function App() {
+  const [user, setUser] = useState(loadUser)
   const [sessionId, setSessionId] = useState(getOrCreateSessionId)
   const [transcriptLines, setTranscriptLines] = useState([])
   const [activeTab, setActiveTab] = useState('note')
@@ -50,6 +61,15 @@ export default function App() {
   const [speechLang, setSpeechLang] = useState('hi-IN')
   const [useSarvam, setUseSarvam] = useState(false)
   const hasStartedRef = useRef(false)
+
+  const handleRegister = useCallback((newUser) => {
+    setUser(newUser)
+  }, [])
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('medscribe_user')
+    setUser(null)
+  }, [])
 
   const handleNewConsultation = useCallback(() => {
     sessionStorage.removeItem(SESSION_STORAGE_KEY)
@@ -127,18 +147,6 @@ export default function App() {
     }, needsDelay ? 800 : 0)
   }, [ws])
 
-  // Auto-process when enough transcript lines accumulate
-  const lastProcessRef = useRef(0)
-  useEffect(() => {
-    if (transcriptLines.length > 0 && transcriptLines.length !== lastProcessRef.current) {
-      const threshold = 6
-      if (transcriptLines.length % threshold === 0) {
-        lastProcessRef.current = transcriptLines.length
-        ws.sendProcess()
-      }
-    }
-  }, [transcriptLines.length, ws])
-
   // Auto-switch to Safety tab when critical alerts arrive
   const prevAlertsRef = useRef(0)
   useEffect(() => {
@@ -157,11 +165,16 @@ export default function App() {
   const hasSession = hasStartedRef.current || transcriptLines.length > 0 || ws.clinicalNote
   const showHero = !hasSession
 
+  // Show registration screen if no user is logged in
+  if (!user) {
+    return <UserRegistration onRegister={handleRegister} />
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
       <HealthBanner />
       <ToastContainer />
-      <Header />
+      <Header user={user} onLogout={handleLogout} />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-3 space-y-3">
         {/* Install Prompt — rendered above content, not floating */}
@@ -373,6 +386,8 @@ export default function App() {
                 <PrescriptionQR
                   medications={ws.clinicalNote?.medications || []}
                   patientInfo={ws.clinicalNote?.patient_info || {}}
+                  sessionId={sessionId}
+                  doctorName={user?.name}
                 />
               </div>
             )}

@@ -110,49 +110,95 @@ Return a JSON object with exactly these fields:
    - "dokedulkhi" / "डोकेदुखी" → "Headache"
    - "ulti" / "उलटी" → "Vomiting"
 3. **Indian Drug Brand → Generic mapping**:
-   - Crocin → Paracetamol
+   - Crocin → Paracetamol 500mg
    - Dolo / Dolo 650 → Paracetamol 650mg
-   - Combiflam → Ibuprofen + Paracetamol
-   - Azithral → Azithromycin
-   - Pan-D → Pantoprazole + Domperidone
+   - Dolo 500 → Paracetamol 500mg
+   - Combiflam → Ibuprofen 400mg + Paracetamol 325mg
+   - Flexon → Ibuprofen 400mg + Paracetamol 325mg
+   - Azithral → Azithromycin 500mg
+   - Pan-D → Pantoprazole 40mg + Domperidone 30mg
    - Shelcal → Calcium + Vitamin D3
-   - Glycomet → Metformin
-   - Cetrizine → Cetirizine
-   - Allegra → Fexofenadine
-   - Augmentin → Amoxicillin + Clavulanic Acid
-   - Zifi → Cefixime
+   - Glycomet → Metformin 500mg
+   - Cetrizine → Cetirizine 10mg
+   - Allegra → Fexofenadine 120mg
+   - Augmentin → Amoxicillin + Clavulanic Acid 625mg
+   - Amoxyclav → Amoxicillin + Clavulanic Acid 625mg
+   - Zifi → Cefixime 200mg
+   - Taxim O → Cefixime 200mg
    - Benadryl → Diphenhydramine
    - Ascoril → Levosalbutamol + Ambroxol + Guaifenesin
-   - Montair → Montelukast
+   - Montair → Montelukast 10mg
+   - Montair LC → Montelukast 10mg + Levocetirizine 5mg
    - Deriphyllin → Etofylline + Theophylline
-   - Ecosprin → Aspirin
-   - Telma → Telmisartan
-4. **ICD-10 codes**: Assign appropriate ICD-10 codes. Common ones:
+   - Ecosprin → Aspirin 75mg
+   - Telma → Telmisartan 40mg
+   - Meftal Spas → Mefenamic Acid 500mg + Dicyclomine 10mg
+   - Meftal P → Mefenamic Acid 100mg + Paracetamol 250mg (pediatric)
+   - Saridon → Propyphenazone + Paracetamol + Caffeine
+   - Disprin → Aspirin 350mg
+   - Metrogyl → Metronidazole 400mg
+   - Norflox TZ → Norfloxacin 400mg + Tinidazole 600mg
+   - Rantac → Ranitidine 150mg
+   - Omez → Omeprazole 20mg
+   - Pantocid → Pantoprazole 40mg
+   - Rablet → Rabeprazole 20mg
+   - Gelusil → Aluminium Hydroxide + Magnesium Hydroxide
+   - Becosules → Vitamin B Complex + Vitamin C
+   - Zincovit → Multivitamin + Zinc
+   - Sinarest → Paracetamol + Phenylephrine + Chlorpheniramine
+   - Vicks Action 500 → Paracetamol + Phenylephrine + Caffeine
+   - Levolin → Levosalbutamol (nebulization)
+   - Budecort → Budesonide (nebulization)
+   - Foracort → Formoterol 6mcg + Budesonide 200mcg (inhaler)
+   - Thyronorm / Eltroxin → Levothyroxine
+   - Amlodipine / Stamlo → Amlodipine 5mg
+   - Atorva → Atorvastatin 10-20mg
+   - Rozavel → Rosuvastatin 10mg
+   - Ondem / Emeset → Ondansetron 4mg
+   - Monocef → Ceftriaxone 1g (injection)
+   - Oflomac → Ofloxacin 200mg
+   - Cifran → Ciprofloxacin 500mg
+   - Avil → Pheniramine 25mg
+   - Okacet → Cetirizine 10mg
+   - Liv 52 → Herbal hepatoprotective
+   - Himalaya Gasex → Herbal antacid
+   - ORS → Oral Rehydration Salts
+4. **Contextual drug resolution**: When a doctor mentions a drug name ambiguously or by colloquial name, resolve it based on the disease context:
+   - "dawai de do" (give medicine) + context of fever → Paracetamol
+   - "Dolo de do" (give Dolo) → Paracetamol 650mg (for fever/pain)
+   - "Azithral start karo" → Azithromycin 500mg (for infection)
+   - "BP ki dawai" (BP medicine) → likely Amlodipine/Telmisartan based on patient history
+   - "sugar ki dawai" (sugar medicine) → Metformin/Glimepiride based on context
+   - "sugar ki dawai badha do" → increase dose of current diabetes medication
+   - "acidity ki dawai" (acidity medicine) → Pantoprazole/Omeprazole/Ranitidine
+   - "allergy ki dawai" → Cetirizine/Levocetirizine/Fexofenadine
+   - "pain killer de do" → Ibuprofen/Paracetamol based on severity
+   - "antibiotic shuru karo" (start antibiotic) → infer specific antibiotic from the infection type
+   - "nebulization karo" → Levosalbutamol + Budesonide (for respiratory distress)
+   - Always try to identify the exact drug and dosage from context clues in the conversation
+   - If exact drug cannot be determined, note the category (e.g., "antihypertensive") and mark the specific drug as needing confirmation
+6. **ICD-10 codes**: Assign appropriate ICD-10 codes. Common ones:
    - Fever: R50.9, Common Cold: J00, URTI: J06.9, Cough: R05
    - Headache: R51, Abdominal Pain: R10.9, Diarrhea: K59.1
    - Type 2 Diabetes: E11.9, Hypertension: I10, Asthma: J45.9
    - UTI: N39.0, Lower Back Pain: M54.5, Viral Fever: B34.9
    - Dengue: A90, Typhoid: A01.0, Malaria: B54, Pneumonia: J18.9
-5. **Differential diagnosis**: For each primary diagnosis, suggest 2-3 differential diagnoses with likelihood, supporting evidence, and distinguishing tests.
-6. **Risk factors and recommended tests**: Identify risk factors and suggest relevant diagnostic tests.
-7. **Do not hallucinate**: If information is not in the transcript, use null for strings and empty arrays [] for lists. Do not invent symptoms, vitals, or diagnoses.
-8. **Incremental updates**: If an existing note is provided, merge new information with existing data. Do not lose previously extracted information.
-9. **clinical_notes**: Write a professional, well-formatted English clinical note suitable for medical records.
-10. **Short or unclear transcripts**: If the transcript is very short, incomplete, or unclear, extract whatever you can. Use null for missing fields and empty arrays for missing lists. Always return valid JSON matching the schema — never return an error message or explanation instead of the JSON.
-11. **Always return the full schema**: Even if no useful information can be extracted, return the complete JSON structure with null values and empty arrays. Never omit fields.
+7. **Differential diagnosis**: For each primary diagnosis, suggest 2-3 differential diagnoses with likelihood, supporting evidence, and distinguishing tests.
+8. **Risk factors and recommended tests**: Identify risk factors and suggest relevant diagnostic tests.
+9. **Do not hallucinate**: If information is not in the transcript, use null for strings and empty arrays [] for lists. Do not invent symptoms, vitals, or diagnoses.
+10. **Complete extraction**: You will receive the COMPLETE conversation transcript. Extract ALL clinical information mentioned anywhere in the conversation. Do not miss any medications, symptoms, diagnoses, or vitals mentioned at any point.
+11. **clinical_notes**: Write a professional, well-formatted English clinical note suitable for medical records.
+12. **Short or unclear transcripts**: If the transcript is very short, incomplete, or unclear, extract whatever you can. Use null for missing fields and empty arrays for missing lists. Always return valid JSON matching the schema — never return an error message or explanation instead of the JSON.
+13. **Always return the full schema**: Even if no useful information can be extracted, return the complete JSON structure with null values and empty arrays. Never omit fields.
 """
 
 USER_PROMPT_TEMPLATE = """## Transcript
 
 {transcript}
 
-## Existing Clinical Note (if any)
-
-{existing_note}
-
 ## Instructions
 
-Extract all clinical information from the transcript above. If an existing clinical note is provided, merge new information into it — do not discard previously extracted data.
+Extract ALL clinical information from the COMPLETE transcript above. This is the full conversation — capture every medication, symptom, diagnosis, vital sign, allergy, and observation mentioned anywhere in it.
 
 IMPORTANT: You MUST return valid JSON matching the schema described in the system instructions. Return the complete schema with all fields — use null for missing string fields and empty arrays [] for missing list fields. No markdown, no explanation, just the JSON object."""
 

@@ -30,10 +30,12 @@ class GeminiExtractionService:
     async def extract_clinical_data(
         self,
         transcript: str,
-        existing_note: dict | None = None,
         specialty: str = "general",
     ) -> dict | None:
-        """Extract structured clinical data from a transcript using Gemini.
+        """Extract structured clinical data from the complete transcript.
+
+        Always receives the full conversation transcript and performs a single
+        comprehensive extraction. No incremental merging.
 
         Returns the parsed dict on success, or None if extraction fails after
         retries.
@@ -51,12 +53,7 @@ class GeminiExtractionService:
             )
             return None
 
-        user_prompt = USER_PROMPT_TEMPLATE.format(
-            transcript=cleaned,
-            existing_note=json.dumps(existing_note, indent=2)
-            if existing_note
-            else "None",
-        )
+        user_prompt = USER_PROMPT_TEMPLATE.format(transcript=cleaned)
 
         # Inject few-shot learning examples from doctor corrections
         learning_context = get_learning_examples(cleaned)
@@ -69,10 +66,9 @@ class GeminiExtractionService:
             user_prompt = user_prompt + "\n" + addendum
 
         logger.info(
-            "Gemini extraction request — transcript length=%d, specialty=%s, has_existing_note=%s",
+            "Gemini extraction request — transcript length=%d, specialty=%s",
             len(cleaned),
             specialty,
-            existing_note is not None,
         )
         logger.debug("Transcript being sent: %s", cleaned[:300])
 

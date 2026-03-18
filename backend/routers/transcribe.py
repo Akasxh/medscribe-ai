@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from fastapi.responses import HTMLResponse
 
 from models.schemas import Session, SessionStatus, ClinicalNote
 from services.gemini_service import GeminiExtractionService
@@ -19,9 +20,6 @@ router = APIRouter()
 # In-memory session store (shared with sessions router)
 # Imported by sessions.py as well
 sessions_store: dict[str, Session] = {}
-
-# Minimum accumulated transcript length before auto-processing
-MIN_TRANSCRIPT_LENGTH = 100
 
 # Minimum transcript length worth sending to Gemini at all
 MIN_PROCESSABLE_LENGTH = 20
@@ -66,7 +64,6 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
         sessions_store[session_id] = Session(id=session_id)
 
     session = sessions_store[session_id]
-    accumulated_text = ""
     specialty = "general"
     fhir_builder = FHIRBundleBuilder()
     processing_lock = asyncio.Lock()
@@ -87,10 +84,10 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                 is_final = message.get("is_final", False)
 
                 if is_final and text:
-                    accumulated_text += " " + text
                     session.transcript += " " + text
 
-                    # Send acknowledgment
+                    # Send acknowledgment (no auto-processing — extraction
+                    # happens only on explicit "process" or "stop")
                     await websocket.send_json(
                         {
                             "type": "transcript_ack",
@@ -98,24 +95,6 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                             "total_length": len(session.transcript.strip()),
                         }
                     )
-
-                    # Auto-process if enough text accumulated
-                    if len(accumulated_text.strip()) >= MIN_TRANSCRIPT_LENGTH:
-                        if processing_lock.locked():
-                            logger.debug(
-                                "Session %s: skipping auto-process, already processing",
-                                session_id,
-                            )
-                        else:
-                            async with processing_lock:
-                                await _process_and_send(
-                                    websocket,
-                                    session,
-                                    accumulated_text,
-                                    fhir_builder,
-                                    specialty=specialty,
-                                )
-                            accumulated_text = ""
 
                 elif not is_final and text:
                     # Interim result — forward to frontend for live display
@@ -138,20 +117,10 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                 )
 
             elif msg_type == "process":
-                # Force processing even if text is short
+                # Process the full accumulated transcript
                 async with processing_lock:
-                    text_to_process = accumulated_text.strip()
-                    if text_to_process and len(text_to_process) >= MIN_PROCESSABLE_LENGTH:
-                        await _process_and_send(
-                            websocket,
-                            session,
-                            accumulated_text,
-                            fhir_builder,
-                            specialty=specialty,
-                        )
-                        accumulated_text = ""
-                    elif session.transcript.strip() and len(session.transcript.strip()) >= MIN_PROCESSABLE_LENGTH:
-                        # Re-process entire transcript
+                    full_text = session.transcript.strip()
+                    if full_text and len(full_text) >= MIN_PROCESSABLE_LENGTH:
                         await _process_and_send(
                             websocket,
                             session,
@@ -163,7 +132,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                         logger.info(
                             "Session %s: 'process' requested but transcript too short (%d chars)",
                             session_id,
-                            len((text_to_process or session.transcript or "").strip()),
+                            len(full_text),
                         )
                         await _send_error(
                             websocket,
@@ -171,22 +140,22 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                         )
 
             elif msg_type == "stop":
-                # Process any remaining text
+                # Process the FULL transcript at end of session
                 async with processing_lock:
-                    remaining = accumulated_text.strip()
-                    if remaining and len(remaining) >= MIN_PROCESSABLE_LENGTH:
+                    full_text = session.transcript.strip()
+                    if full_text and len(full_text) >= MIN_PROCESSABLE_LENGTH:
                         await _process_and_send(
                             websocket,
                             session,
-                            accumulated_text,
+                            session.transcript,
                             fhir_builder,
                             specialty=specialty,
                         )
-                    elif remaining:
+                    elif full_text:
                         logger.info(
-                            "Session %s: stop with short remaining text (%d chars), skipping extraction",
+                            "Session %s: stop with short transcript (%d chars), skipping extraction",
                             session_id,
-                            len(remaining),
+                            len(full_text),
                         )
 
                 session.status = SessionStatus.COMPLETED
@@ -347,15 +316,8 @@ async def _process_and_send(
     try:
         gemini = _get_gemini_service()
 
-        existing_note = (
-            session.clinical_note.model_dump()
-            if session.clinical_note
-            else None
-        )
-
         clinical_data = await gemini.extract_clinical_data(
             transcript=cleaned,
-            existing_note=existing_note,
             specialty=specialty,
         )
 
@@ -499,3 +461,162 @@ async def _process_and_send(
         logger.error("Processing error for session %s: %s", session.id, e, exc_info=True)
         await _send_error(websocket, f"Processing error: {str(e)}")
         await websocket.send_json({"type": "processing", "status": "completed"})
+
+
+@router.get("/api/rx/{session_id}")
+async def get_prescription(session_id: str):
+    """Get prescription data for a session (for QR code scanning)."""
+    session = sessions_store.get(session_id)
+    if not session:
+        return {"error": "Session not found", "session_id": session_id}
+    return {
+        "session_id": session_id,
+        "clinical_note": session.clinical_note.model_dump() if session.clinical_note else None,
+        "fhir_bundle": session.fhir_bundle,
+        "created_at": session.created_at.isoformat() if session.created_at else None,
+    }
+
+
+@router.get("/rx/{session_id}", response_class=HTMLResponse)
+async def view_prescription_page(session_id: str):
+    """Serve a human-readable prescription page for QR code scans."""
+    session = sessions_store.get(session_id)
+
+    if not session or not session.clinical_note:
+        return HTMLResponse(content=f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prescription Not Found - MedScribe AI</title>
+  <style>
+    body {{ font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 2rem; background: #f8fafc; color: #0f172a; display: flex; justify-content: center; }}
+    .card {{ max-width: 480px; width: 100%; background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }}
+    h1 {{ font-size: 1.25rem; margin: 0 0 0.5rem; }}
+    p {{ color: #64748b; font-size: 0.875rem; }}
+    code {{ background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Prescription Not Found</h1>
+    <p>No prescription data found for session <code>{session_id}</code>.</p>
+    <p>The session may have expired or the consultation has not been processed yet.</p>
+  </div>
+</body>
+</html>""", status_code=404)
+
+    note = session.clinical_note
+    patient = note.patient_info or {}
+    patient_name = patient.get("name", "Patient")
+    patient_age = patient.get("age", "")
+    patient_gender = patient.get("gender", "")
+    date_str = session.created_at.strftime("%d %b %Y, %I:%M %p") if session.created_at else "N/A"
+
+    # Build medications HTML
+    meds_html = ""
+    if note.medications:
+        rows = ""
+        for i, m in enumerate(note.medications, 1):
+            rows += f"""<tr>
+              <td>{i}</td>
+              <td><strong>{m.name}</strong><br><span class="generic">{m.generic_name}</span></td>
+              <td>{m.dosage}</td>
+              <td>{m.frequency}</td>
+              <td>{m.duration}</td>
+            </tr>"""
+        meds_html = f"""<table>
+          <thead><tr><th>#</th><th>Medication</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr></thead>
+          <tbody>{rows}</tbody>
+        </table>"""
+    else:
+        meds_html = "<p class='empty'>No medications prescribed.</p>"
+
+    # Diagnosis
+    dx_html = ""
+    if note.diagnosis:
+        items = "".join(
+            f"<li><strong>{d.condition}</strong> <span class='code'>{d.icd10_code}</span></li>"
+            for d in note.diagnosis
+        )
+        dx_html = f"<div class='section'><h3>Diagnosis</h3><ul>{items}</ul></div>"
+
+    # Follow up
+    fu_html = ""
+    if note.follow_up:
+        fu_html = f"<div class='section followup'><h3>Follow-up</h3><p>{note.follow_up}</p></div>"
+
+    # Allergies
+    allergy_html = ""
+    if note.allergies:
+        items = "".join(f"<li>{a}</li>" for a in note.allergies)
+        allergy_html = f"<div class='section allergy'><h3>Allergies</h3><ul>{items}</ul></div>"
+
+    return HTMLResponse(content=f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prescription - {patient_name} - MedScribe AI</title>
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{ font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: #f0f4f8; color: #1e293b; padding: 1rem; }}
+    .rx {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }}
+    .header {{ background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; padding: 1.5rem; }}
+    .header h1 {{ font-size: 1.25rem; font-weight: 700; }}
+    .header p {{ opacity: 0.85; font-size: 0.8rem; margin-top: 0.25rem; }}
+    .badge {{ display: inline-block; background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 999px; font-size: 0.7rem; margin-top: 0.5rem; }}
+    .patient {{ padding: 1rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }}
+    .patient .name {{ font-weight: 600; font-size: 1rem; }}
+    .patient .meta {{ font-size: 0.8rem; color: #64748b; }}
+    .body {{ padding: 1.5rem; }}
+    .section {{ margin-bottom: 1.25rem; }}
+    .section h3 {{ font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.5rem; font-weight: 600; }}
+    .section ul {{ list-style: none; }}
+    .section ul li {{ padding: 0.4rem 0; font-size: 0.875rem; border-bottom: 1px solid #f1f5f9; }}
+    .section ul li:last-child {{ border: none; }}
+    .code {{ background: #eff6ff; color: #2563eb; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 500; margin-left: 0.5rem; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 0.8rem; }}
+    th {{ text-align: left; padding: 0.5rem; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 2px solid #e2e8f0; }}
+    td {{ padding: 0.6rem 0.5rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; }}
+    .generic {{ color: #94a3b8; font-size: 0.75rem; }}
+    .followup {{ background: #eff6ff; padding: 0.75rem 1rem; border-radius: 8px; }}
+    .followup p {{ font-size: 0.875rem; color: #1e40af; }}
+    .allergy {{ background: #fef2f2; padding: 0.75rem 1rem; border-radius: 8px; }}
+    .allergy h3 {{ color: #dc2626; }}
+    .allergy li {{ color: #991b1b; font-size: 0.875rem; }}
+    .empty {{ color: #94a3b8; font-size: 0.875rem; font-style: italic; }}
+    .footer {{ padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; text-align: center; font-size: 0.7rem; color: #94a3b8; }}
+    @media print {{ body {{ background: white; padding: 0; }} .rx {{ box-shadow: none; border-radius: 0; }} }}
+  </style>
+</head>
+<body>
+  <div class="rx">
+    <div class="header">
+      <h1>MedScribe AI</h1>
+      <p>Digital Prescription</p>
+      <span class="badge">FHIR R4 Compliant</span>
+    </div>
+    <div class="patient">
+      <div>
+        <div class="name">{patient_name}</div>
+        <div class="meta">{', '.join(filter(None, [patient_age, patient_gender]))}</div>
+      </div>
+      <div class="meta">{date_str}</div>
+    </div>
+    <div class="body">
+      {allergy_html}
+      {dx_html}
+      <div class="section">
+        <h3>Medications</h3>
+        {meds_html}
+      </div>
+      {fu_html}
+    </div>
+    <div class="footer">
+      Generated by MedScribe AI &mdash; Session {session_id[:20]}...
+    </div>
+  </div>
+</body>
+</html>""")
+

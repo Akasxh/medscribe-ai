@@ -40,13 +40,11 @@ export default function useWebSocket(sessionId) {
         switch (msg.type) {
           case 'clinical_note':
             setClinicalNote(msg.data)
-            showToast('Clinical note extracted', 'success')
             break
           case 'fhir_bundle':
             setFhirBundle(msg.data)
             if (msg.quality_score) {
               setFhirQuality(msg.quality_score)
-              showToast(`FHIR Bundle: Grade ${msg.quality_score.grade} (${msg.quality_score.score}%)`, 'success')
             }
             break
           case 'cds_alerts': {
@@ -55,8 +53,6 @@ export default function useWebSocket(sessionId) {
             const criticalCount = alerts.filter(a => a.severity === 'critical').length
             if (criticalCount > 0) {
               showToast(`${criticalCount} CRITICAL safety alert${criticalCount > 1 ? 's' : ''} detected!`, 'critical')
-            } else if (alerts.length > 0) {
-              showToast(`${alerts.length} safety alert${alerts.length > 1 ? 's' : ''} detected`, 'warning')
             }
             break
           }

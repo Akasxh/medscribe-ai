@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from models.schemas import Session, SessionStatus
 from routers.transcribe import sessions_store
