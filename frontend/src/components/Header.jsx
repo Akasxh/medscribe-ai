@@ -1,5 +1,6 @@
 import { Moon, Sun, ShieldCheck, LogOut, User } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { InstallButton } from './InstallPrompt'
 
 export default function Header({ user, onLogout }) {
   const [dark, setDark] = useState(() => {
@@ -55,6 +56,9 @@ export default function Header({ user, onLogout }) {
                 )}
               </div>
             )}
+
+            {/* Install App button */}
+            <InstallButton />
 
             {/* ABDM-Ready badge */}
             <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold">
