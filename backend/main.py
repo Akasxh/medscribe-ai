@@ -95,8 +95,8 @@ if os.path.exists(_static_dir):
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str) -> FileResponse:
         """SPA fallback: serve index.html for all non-API/WS routes."""
-        if full_path.startswith(("api/", "ws/")):
-            # Let FastAPI handle API/WS routes normally
+        if full_path.startswith(("api/", "ws/", "rx/")):
+            # Let FastAPI handle API/WS/Rx routes normally
             raise HTTPException(status_code=404, detail="Not found")
         file_path = os.path.join(_static_dir, full_path)
         if os.path.exists(file_path) and os.path.isfile(file_path):

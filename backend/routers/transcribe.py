@@ -368,7 +368,18 @@ async def _process_and_send(
             logger.warning(
                 "Could not parse clinical data into ClinicalNote model: %s", e
             )
-            # Still send the raw data to frontend
+            # Fallback: build ClinicalNote with safe defaults so /rx/ page works
+            try:
+                safe_data = {
+                    "patient_info": clinical_data.get("patient_info", {}),
+                    "chief_complaint": clinical_data.get("chief_complaint", ""),
+                    "history_of_present_illness": clinical_data.get("history_of_present_illness", ""),
+                    "follow_up": clinical_data.get("follow_up"),
+                    "clinical_notes": clinical_data.get("clinical_notes", ""),
+                }
+                session.clinical_note = ClinicalNote(**safe_data)
+            except Exception as e2:
+                logger.error("Fallback ClinicalNote creation also failed: %s", e2)
 
         # Run Clinical Decision Support checks (needed for DetectedIssue FHIR resources)
         try:

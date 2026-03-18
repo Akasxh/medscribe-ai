@@ -80,6 +80,8 @@ export default function App() {
     setActiveTab('note')
     setSpecialty('general')
     hasStartedRef.current = false
+    lastTranscriptRef.current = ''
+    lastDemoTranscriptRef.current = ''
   }, [])
 
   const ws = useWebSocket(sessionId)
@@ -87,8 +89,13 @@ export default function App() {
   // Safety score hook
   const safetyScore = useSafetyScore(ws.cdsAlerts, ws.fhirQuality, ws.clinicalNote)
 
+  const lastTranscriptRef = useRef('')
+
   const handleTranscript = useCallback((text, isFinal) => {
     if (isFinal) {
+      // Deduplicate: skip if identical to the last final transcript
+      if (text === lastTranscriptRef.current) return
+      lastTranscriptRef.current = text
       setTranscriptLines(prev => [...prev, text])
     }
     ws.sendTranscript(text, isFinal)
@@ -133,6 +140,7 @@ export default function App() {
   }, [recorder, ws])
 
   // Demo mode handler
+  const lastDemoTranscriptRef = useRef('')
   const handleDemoTranscript = useCallback((text, isFinal) => {
     const needsDelay = !hasStartedRef.current
     if (!hasStartedRef.current) {
@@ -141,6 +149,9 @@ export default function App() {
     }
     setTimeout(() => {
       if (isFinal) {
+        // Deduplicate: skip if identical to the last final demo transcript
+        if (text === lastDemoTranscriptRef.current) return
+        lastDemoTranscriptRef.current = text
         setTranscriptLines(prev => [...prev, text])
       }
       ws.sendTranscript(text, isFinal)

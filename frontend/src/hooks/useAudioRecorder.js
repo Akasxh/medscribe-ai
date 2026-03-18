@@ -34,6 +34,7 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
   const timerRef = useRef(null)
   const [supported, setSupported] = useState(true)
   const fullTranscriptRef = useRef([])
+  const lastFinalTextRef = useRef('')
   const [lastCommand, setLastCommand] = useState(null)
   const commandTimeoutRef = useRef(null)
 
@@ -85,6 +86,9 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
           onCommand?.(command)
           return
         }
+        // Deduplicate: skip if identical to last final text (overlapping chunks)
+        if (text === lastFinalTextRef.current) return
+        lastFinalTextRef.current = text
         fullTranscriptRef.current.push(text)
         onTranscript?.(text, true)
       }
@@ -131,6 +135,7 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
       isRecordingRef.current = true
       setElapsed(0)
       fullTranscriptRef.current = []
+      lastFinalTextRef.current = ''
 
       timerRef.current = setInterval(() => {
         setElapsed((prev) => prev + 1)
@@ -189,6 +194,9 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
             // Don't send command text as transcript
             continue
           }
+          // Deduplicate: skip if identical to last final text
+          if (transcript === lastFinalTextRef.current) continue
+          lastFinalTextRef.current = transcript
           fullTranscriptRef.current.push(transcript)
           onTranscript?.(transcript, true)
         } else {
@@ -225,6 +233,7 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
     isRecordingRef.current = true
     setElapsed(0)
     fullTranscriptRef.current = []
+    lastFinalTextRef.current = ''
 
     timerRef.current = setInterval(() => {
       setElapsed((prev) => prev + 1)

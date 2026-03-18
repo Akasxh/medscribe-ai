@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { QrCode, Download, X, ExternalLink } from 'lucide-react'
 import QRCode from 'qrcode'
 
-const RX_BASE_URL = 'https://medscribe-ai-production-851f.up.railway.app/rx'
+const RX_BASE_URL = `${window.location.origin}/rx`
 
 export default function PrescriptionQR({ medications = [], patientInfo = {}, sessionId, doctorName }) {
   const [qrDataUrl, setQrDataUrl] = useState(null)
