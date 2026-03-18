@@ -64,6 +64,11 @@
 >
 > Use **Demo Mode** (built-in button) to see the full pipeline without a microphone.
 
+<div align="center">
+  
+  https://github.com/user-attachments/assets/5f58e6d3-4ba6-44e6-950a-f22f7c64e961
+  
+</div>
 ---
 
 ## Key Features
