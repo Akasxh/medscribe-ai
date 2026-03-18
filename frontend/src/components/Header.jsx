@@ -27,8 +27,8 @@ export default function Header() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm">
               <Activity className="w-4 h-4 text-white" strokeWidth={2.5} aria-hidden="true" />
             </div>
-            <span className="text-base font-semibold tracking-tight text-slate-900 dark:text-white hidden sm:block">
-              MedScribe<span className="text-blue-600 dark:text-blue-400 ml-0.5">AI</span>
+            <span className="text-sm sm:text-base font-semibold tracking-tight text-slate-900 dark:text-white">
+              MedScribe<span className="text-blue-600 dark:text-blue-400 ml-0.5 hidden sm:inline">AI</span>
             </span>
           </div>
 

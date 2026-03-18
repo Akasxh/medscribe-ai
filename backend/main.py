@@ -21,6 +21,7 @@ from starlette.requests import Request
 from routers.transcribe import router as transcribe_router
 from routers.sessions import router as sessions_router
 from services.encryption_service import get_encryption_status
+from services.stt_service import get_stt_status
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -80,6 +81,7 @@ async def health_check():
         "version": "1.0.0",
         "gemini_configured": gemini_configured,
         "security": get_encryption_status(),
+        "stt": get_stt_status(),
     }
 
 

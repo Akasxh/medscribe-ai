@@ -318,7 +318,7 @@ ALLERGY_RULES: list[AllergyRule] = [
 
 def _normalise(text: str) -> str:
     """Lower-case and strip a string for comparison."""
-    return text.strip().lower()
+    return (text or "").strip().lower()
 
 
 def _medication_tokens(medication: dict) -> set[str]:
@@ -351,8 +351,8 @@ def _all_medication_tokens(medications: list[dict]) -> set[str]:
 
 def _medication_display_name(medication: dict) -> str:
     """Human-readable label for a medication dict."""
-    brand = medication.get("name", "")
-    generic = medication.get("generic_name", "")
+    brand = medication.get("name") or ""
+    generic = medication.get("generic_name") or ""
     if brand and generic and _normalise(brand) != _normalise(generic):
         return f"{brand} ({generic})"
     return brand or generic or "Unknown"
@@ -424,6 +424,8 @@ def _check_allergy_contraindications(
 
     allergy_tokens: set[str] = set()
     for allergy in allergies:
+        if not allergy:
+            continue
         normalised = _normalise(allergy)
         allergy_tokens.add(normalised)
         for word in normalised.replace("+", " ").split():
@@ -477,8 +479,8 @@ def _check_dosage_alerts(medications: list[dict]) -> list[dict]:
     }
 
     for med in medications:
-        generic = _normalise(med.get("generic_name", ""))
-        dosage_str = _normalise(med.get("dosage", ""))
+        generic = _normalise(med.get("generic_name") or "")
+        dosage_str = _normalise(med.get("dosage") or "")
 
         if not dosage_str or not generic:
             continue

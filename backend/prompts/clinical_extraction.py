@@ -53,7 +53,7 @@ Return a JSON object with exactly these fields:
       "condition": "string - possible diagnosis",
       "icd10_code": "string",
       "likelihood": "high | moderate | low",
-      "confidence": "number 0.0-1.0 - probability estimate",
+      "confidence": "number 0.0-1.0",
       "supporting_evidence": "string - which symptoms/findings support this",
       "distinguishing_tests": "string - what test would confirm/rule out this"
     }
@@ -66,8 +66,8 @@ Return a JSON object with exactly these fields:
 
 ## Rules
 
-1. **Language**: All output must be in English, even if the transcript is in Hindi/Hinglish.
-2. **Translation examples**:
+1. **Language**: All output must be in English, even if the transcript is in any Indian language (Hindi, Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, Malayalam) or code-mixed with English. The transcript may arrive in any of these languages — always translate to English in your output.
+2. **Translation examples (Hindi/Hinglish)**:
    - "pet mein dard" → "Abdominal pain"
    - "sar dard" / "sir mein dard" → "Headache"
    - "bukhar" → "Fever"
@@ -78,6 +78,37 @@ Return a JSON object with exactly these fields:
    - "chakkar" → "Dizziness"
    - "sans lene mein taklif" → "Difficulty breathing"
    - "khujli" → "Itching"
+   **Tamil medical terms**:
+   - "kaichal" / "காய்ச்சல்" → "Fever"
+   - "irumal" / "இருமல்" → "Cough"
+   - "vayiru vali" / "வயிறு வலி" → "Abdominal pain"
+   - "thalai vali" / "தலைவலி" → "Headache"
+   - "vaandhi" / "வாந்தி" → "Vomiting"
+   - "moochu thinaral" / "மூச்சுத் திணறல்" → "Difficulty breathing"
+   - "nenjuvali" / "நெஞ்சுவலி" → "Chest pain"
+   - "sali" / "சளி" → "Common cold / nasal congestion"
+   **Telugu medical terms**:
+   - "jwaram" / "జ్వరం" → "Fever"
+   - "daggu" / "దగ్గు" → "Cough"
+   - "kadupu noppi" / "కడుపు నొప్పి" → "Abdominal pain"
+   - "tala noppi" / "తల నొప్పి" → "Headache"
+   - "vantulu" / "వాంతులు" → "Vomiting"
+   - "virechanalu" / "విరేచనాలు" → "Diarrhea"
+   - "swaasa" / "శ్వాస" → "Breathlessness"
+   **Bengali medical terms**:
+   - "jor" / "জ্বর" → "Fever"
+   - "kashi" / "কাশি" → "Cough"
+   - "pet byatha" / "পেট ব্যথা" → "Abdominal pain"
+   - "matha byatha" / "মাথা ব্যথা" → "Headache"
+   - "bomi" / "বমি" → "Vomiting"
+   - "shash koshto" / "শ্বাস কষ্ট" → "Difficulty breathing"
+   - "buk byatha" / "বুক ব্যথা" → "Chest pain"
+   **Marathi medical terms**:
+   - "taap" / "ताप" → "Fever"
+   - "khokal" / "खोकला" → "Cough"
+   - "potdukhi" / "पोटदुखी" → "Abdominal pain"
+   - "dokedulkhi" / "डोकेदुखी" → "Headache"
+   - "ulti" / "उलटी" → "Vomiting"
 3. **Indian Drug Brand → Generic mapping**:
    - Crocin → Paracetamol
    - Dolo / Dolo 650 → Paracetamol 650mg
@@ -102,11 +133,13 @@ Return a JSON object with exactly these fields:
    - Type 2 Diabetes: E11.9, Hypertension: I10, Asthma: J45.9
    - UTI: N39.0, Lower Back Pain: M54.5, Viral Fever: B34.9
    - Dengue: A90, Typhoid: A01.0, Malaria: B54, Pneumonia: J18.9
-5. **Differential diagnosis**: For each primary diagnosis, suggest 2-3 differential diagnoses that should be considered. Base these on the symptoms and findings in the transcript. This helps doctors consider alternative diagnoses. Include the likelihood (high/moderate/low), supporting evidence from the transcript, and a distinguishing test that could confirm or rule out each differential.
-6. **Risk factors and recommended tests**: Identify any risk factors mentioned or implied in the conversation (e.g. age, smoking, family history, occupation). Suggest relevant lab or imaging tests based on the symptoms and differential diagnoses.
-7. **Do not hallucinate**: If information is not in the transcript, use null. Do not invent symptoms, vitals, or diagnoses.
+5. **Differential diagnosis**: For each primary diagnosis, suggest 2-3 differential diagnoses with likelihood, supporting evidence, and distinguishing tests.
+6. **Risk factors and recommended tests**: Identify risk factors and suggest relevant diagnostic tests.
+7. **Do not hallucinate**: If information is not in the transcript, use null for strings and empty arrays [] for lists. Do not invent symptoms, vitals, or diagnoses.
 8. **Incremental updates**: If an existing note is provided, merge new information with existing data. Do not lose previously extracted information.
 9. **clinical_notes**: Write a professional, well-formatted English clinical note suitable for medical records.
+10. **Short or unclear transcripts**: If the transcript is very short, incomplete, or unclear, extract whatever you can. Use null for missing fields and empty arrays for missing lists. Always return valid JSON matching the schema — never return an error message or explanation instead of the JSON.
+11. **Always return the full schema**: Even if no useful information can be extracted, return the complete JSON structure with null values and empty arrays. Never omit fields.
 """
 
 USER_PROMPT_TEMPLATE = """## Transcript
@@ -121,7 +154,7 @@ USER_PROMPT_TEMPLATE = """## Transcript
 
 Extract all clinical information from the transcript above. If an existing clinical note is provided, merge new information into it — do not discard previously extracted data.
 
-Return ONLY valid JSON matching the schema described in the system instructions. No markdown, no explanation, just the JSON object."""
+IMPORTANT: You MUST return valid JSON matching the schema described in the system instructions. Return the complete schema with all fields — use null for missing string fields and empty arrays [] for missing list fields. No markdown, no explanation, just the JSON object."""
 
 SPECIALTY_ADDENDUMS = {
     "general": "",  # no addendum needed

@@ -54,8 +54,8 @@ def validate_clinical_data(clinical_data: dict) -> dict:
 
     # Validate ICD-10 codes in diagnoses
     for i, dx in enumerate(clinical_data.get("diagnosis", [])):
-        code = dx.get("icd10_code", "")
-        condition = dx.get("condition", "")
+        code = dx.get("icd10_code") or ""
+        condition = dx.get("condition") or ""
         total_count += 1
 
         if code in _icd10_codes:
@@ -89,13 +89,13 @@ def validate_clinical_data(clinical_data: dict) -> dict:
 
     # Validate differential diagnoses
     for i, dd in enumerate(clinical_data.get("differential_diagnosis", [])):
-        code = dd.get("icd10_code", "")
+        code = dd.get("icd10_code") or ""
         total_count += 1
         if code in _icd10_codes:
             validated.append({
                 "field": f"differential_diagnosis[{i}]",
                 "code": code,
-                "display": dd.get("condition", ""),
+                "display": dd.get("condition") or "",
                 "status": "valid",
                 "source": "ICD-10-CM",
             })
@@ -107,8 +107,8 @@ def validate_clinical_data(clinical_data: dict) -> dict:
     drug_generics_lower = {v["generic"].lower(): k for k, v in _drug_reference.items()}
 
     for i, med in enumerate(clinical_data.get("medications", [])):
-        name = med.get("name", "").lower()
-        generic = med.get("generic_name", "").lower()
+        name = (med.get("name") or "").lower()
+        generic = (med.get("generic_name") or "").lower()
         total_count += 1
 
         matched = False
@@ -130,11 +130,14 @@ def validate_clinical_data(clinical_data: dict) -> dict:
                         matched = True
                         break
 
+        med_name = med.get("name") or ""
+        med_generic = med.get("generic_name") or ""
+        med_display = f"{med_name} ({med_generic})" if med_name or med_generic else "Unknown"
         if matched:
             validated.append({
                 "field": f"medications[{i}]",
-                "code": med.get("name"),
-                "display": f"{med.get('name')} ({med.get('generic_name')})",
+                "code": med_name,
+                "display": med_display,
                 "status": "valid",
                 "source": "Drug Reference (Indian Pharmacopeia)",
             })
@@ -142,8 +145,8 @@ def validate_clinical_data(clinical_data: dict) -> dict:
         else:
             validated.append({
                 "field": f"medications[{i}]",
-                "code": med.get("name"),
-                "display": f"{med.get('name')} ({med.get('generic_name')})",
+                "code": med_name,
+                "display": med_display,
                 "status": "unknown",
                 "source": "Drug Reference",
             })

@@ -3,13 +3,14 @@ import json
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 
 from models.schemas import Session, SessionStatus, ClinicalNote
 from services.gemini_service import GeminiExtractionService
 from services.fhir_service import FHIRBundleBuilder
 from services.cds_service import check_clinical_alerts
 from services.terminology_service import validate_clinical_data
+from services.stt_service import transcribe_audio, get_stt_status
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,9 @@ sessions_store: dict[str, Session] = {}
 # Minimum accumulated transcript length before auto-processing
 MIN_TRANSCRIPT_LENGTH = 100
 
+# Minimum transcript length worth sending to Gemini at all
+MIN_PROCESSABLE_LENGTH = 20
+
 # Lazy-initialized service (so app starts even without GEMINI_API_KEY)
 _gemini_service = None
 
@@ -33,10 +37,29 @@ def _get_gemini_service() -> GeminiExtractionService:
     return _gemini_service
 
 
+@router.post("/api/transcribe")
+async def transcribe_audio_endpoint(
+    file: UploadFile = File(...),
+    language: str = Form(default="hi-IN"),
+):
+    """Transcribe audio using Sarvam AI STT."""
+    audio_bytes = await file.read()
+    transcript = await transcribe_audio(audio_bytes, language)
+    if transcript is not None:
+        return {"transcript": transcript, "language": language}
+    return {"error": "Transcription failed", "transcript": ""}
+
+
+@router.get("/api/stt/status")
+async def stt_status():
+    """Return STT service status."""
+    return get_stt_status()
+
+
 @router.websocket("/ws/transcribe/{session_id}")
 async def websocket_transcribe(websocket: WebSocket, session_id: str):
     await websocket.accept()
-    logger.info(f"WebSocket connected for session {session_id}")
+    logger.info("WebSocket connected for session %s", session_id)
 
     # Get or create session
     if session_id not in sessions_store:
@@ -54,9 +77,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
             try:
                 message = json.loads(raw)
             except json.JSONDecodeError:
-                await websocket.send_json(
-                    {"type": "error", "message": "Invalid JSON"}
-                )
+                await _send_error(websocket, "Invalid JSON")
                 continue
 
             msg_type = message.get("type", "")
@@ -80,15 +101,21 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
 
                     # Auto-process if enough text accumulated
                     if len(accumulated_text.strip()) >= MIN_TRANSCRIPT_LENGTH:
-                        async with processing_lock:
-                            await _process_and_send(
-                                websocket,
-                                session,
-                                accumulated_text,
-                                fhir_builder,
-                                specialty=specialty,
+                        if processing_lock.locked():
+                            logger.debug(
+                                "Session %s: skipping auto-process, already processing",
+                                session_id,
                             )
-                        accumulated_text = ""
+                        else:
+                            async with processing_lock:
+                                await _process_and_send(
+                                    websocket,
+                                    session,
+                                    accumulated_text,
+                                    fhir_builder,
+                                    specialty=specialty,
+                                )
+                            accumulated_text = ""
 
                 elif not is_final and text:
                     # Interim result — forward to frontend for live display
@@ -113,7 +140,8 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
             elif msg_type == "process":
                 # Force processing even if text is short
                 async with processing_lock:
-                    if accumulated_text.strip():
+                    text_to_process = accumulated_text.strip()
+                    if text_to_process and len(text_to_process) >= MIN_PROCESSABLE_LENGTH:
                         await _process_and_send(
                             websocket,
                             session,
@@ -122,7 +150,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                             specialty=specialty,
                         )
                         accumulated_text = ""
-                    elif session.transcript.strip():
+                    elif session.transcript.strip() and len(session.transcript.strip()) >= MIN_PROCESSABLE_LENGTH:
                         # Re-process entire transcript
                         await _process_and_send(
                             websocket,
@@ -131,17 +159,34 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                             fhir_builder,
                             specialty=specialty,
                         )
+                    else:
+                        logger.info(
+                            "Session %s: 'process' requested but transcript too short (%d chars)",
+                            session_id,
+                            len((text_to_process or session.transcript or "").strip()),
+                        )
+                        await _send_error(
+                            websocket,
+                            "Transcript too short to process. Keep recording.",
+                        )
 
             elif msg_type == "stop":
                 # Process any remaining text
                 async with processing_lock:
-                    if accumulated_text.strip():
+                    remaining = accumulated_text.strip()
+                    if remaining and len(remaining) >= MIN_PROCESSABLE_LENGTH:
                         await _process_and_send(
                             websocket,
                             session,
                             accumulated_text,
                             fhir_builder,
                             specialty=specialty,
+                        )
+                    elif remaining:
+                        logger.info(
+                            "Session %s: stop with short remaining text (%d chars), skipping extraction",
+                            session_id,
+                            len(remaining),
                         )
 
                 session.status = SessionStatus.COMPLETED
@@ -153,36 +198,43 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                         "session_id": session_id,
                     }
                 )
-                logger.info(f"Session {session_id} completed")
+                logger.info("Session %s completed", session_id)
 
             else:
-                await websocket.send_json(
-                    {
-                        "type": "error",
-                        "message": f"Unknown message type: {msg_type}",
-                    }
+                await _send_error(
+                    websocket, f"Unknown message type: {msg_type}"
                 )
 
     except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected for session {session_id}")
+        logger.info("WebSocket disconnected for session %s", session_id)
     except Exception as e:
-        logger.error(f"WebSocket error for session {session_id}: {e}")
-        try:
-            await websocket.send_json(
-                {"type": "error", "message": str(e)}
-            )
-        except Exception:
-            pass
+        logger.error("WebSocket error for session %s: %s", session_id, e, exc_info=True)
+        await _send_error(websocket, str(e))
+
+
+async def _send_error(websocket: WebSocket, message: str) -> None:
+    """Send an error message to the frontend, swallowing send failures."""
+    try:
+        await websocket.send_json({"type": "error", "message": message})
+    except Exception:
+        pass
 
 
 def _calculate_fhir_quality(fhir_bundle: dict, clinical_data: dict) -> dict:
     """Calculate FHIR bundle completeness and quality score."""
+    if not fhir_bundle or not isinstance(fhir_bundle, dict):
+        return {"score": 0, "total_resources": 0, "checks": [], "grade": "D"}
+
     score = 0
     max_score = 0
     checks = []
 
-    entries = fhir_bundle.get("entry", [])
-    resource_types = [e.get("resource", {}).get("resourceType") for e in entries]
+    entries = fhir_bundle.get("entry", []) or []
+    resource_types = [
+        e.get("resource", {}).get("resourceType")
+        for e in entries
+        if isinstance(e, dict)
+    ]
 
     # Check for required resource types
     required = ["Patient", "Encounter", "Condition"]
@@ -195,7 +247,14 @@ def _calculate_fhir_quality(fhir_bundle: dict, clinical_data: dict) -> dict:
             checks.append({"name": f"{rt} resource", "passed": False})
 
     # Check for optional but valuable resource types
-    optional = ["Observation", "MedicationRequest", "AllergyIntolerance", "CarePlan", "ServiceRequest", "DetectedIssue"]
+    optional = [
+        "Observation",
+        "MedicationRequest",
+        "AllergyIntolerance",
+        "CarePlan",
+        "ServiceRequest",
+        "DetectedIssue",
+    ]
     for rt in optional:
         max_score += 10
         if rt in resource_types:
@@ -205,9 +264,9 @@ def _calculate_fhir_quality(fhir_bundle: dict, clinical_data: dict) -> dict:
             checks.append({"name": f"{rt} resource", "passed": False})
 
     # Check coding systems (ICD-10, SNOMED, LOINC, RxNorm)
-    coding_systems_found = set()
+    coding_systems_found: set[str] = set()
     for entry in entries:
-        resource = entry.get("resource", {})
+        resource = entry.get("resource", {}) if isinstance(entry, dict) else {}
         _extract_coding_systems(resource, coding_systems_found)
 
     for system_name in ["ICD-10", "SNOMED", "LOINC", "RxNorm"]:
@@ -223,7 +282,7 @@ def _calculate_fhir_quality(fhir_bundle: dict, clinical_data: dict) -> dict:
     has_references = any(
         "subject" in e.get("resource", {}) or "patient" in e.get("resource", {})
         for e in entries
-        if e.get("resource", {}).get("resourceType") != "Patient"
+        if isinstance(e, dict) and e.get("resource", {}).get("resourceType") != "Patient"
     )
     if has_references:
         score += 5
@@ -237,7 +296,12 @@ def _calculate_fhir_quality(fhir_bundle: dict, clinical_data: dict) -> dict:
         "score": percentage,
         "total_resources": len(entries),
         "checks": checks,
-        "grade": "A" if percentage >= 90 else "B" if percentage >= 75 else "C" if percentage >= 60 else "D",
+        "grade": (
+            "A" if percentage >= 90
+            else "B" if percentage >= 75
+            else "C" if percentage >= 60
+            else "D"
+        ),
     }
 
 
@@ -262,7 +326,23 @@ async def _process_and_send(
     specialty: str = "general",
 ):
     """Run Gemini extraction and FHIR bundle generation, send results."""
+    cleaned = transcript_text.strip()
+
+    # --- Guard: don't process empty/tiny transcripts ---
+    if not cleaned or len(cleaned) < MIN_PROCESSABLE_LENGTH:
+        logger.warning(
+            "Skipping _process_and_send: transcript too short (%d chars)",
+            len(cleaned),
+        )
+        await _send_error(websocket, "Transcript too short to process.")
+        return
+
     await websocket.send_json({"type": "processing", "status": "started"})
+    logger.info(
+        "Processing transcript (%d chars) for session %s",
+        len(cleaned),
+        session.id,
+    )
 
     try:
         gemini = _get_gemini_service()
@@ -274,35 +354,77 @@ async def _process_and_send(
         )
 
         clinical_data = await gemini.extract_clinical_data(
-            transcript=transcript_text.strip(),
+            transcript=cleaned,
             existing_note=existing_note,
             specialty=specialty,
         )
 
         if clinical_data is None:
-            await websocket.send_json(
-                {
-                    "type": "error",
-                    "message": "Clinical extraction failed",
-                }
+            logger.error("Gemini extraction returned None for session %s", session.id)
+            await _send_error(
+                websocket,
+                "Clinical extraction failed — the AI could not parse the transcript. "
+                "Try speaking more clearly or recording a longer segment.",
             )
+            await websocket.send_json({"type": "processing", "status": "completed"})
             return
+
+        # --- Null-safe: ensure expected keys exist with safe defaults ---
+        clinical_data.setdefault("patient_info", {})
+        clinical_data.setdefault("chief_complaint", None)
+        clinical_data.setdefault("history_of_present_illness", None)
+        clinical_data.setdefault("symptoms", [])
+        clinical_data.setdefault("vitals", {})
+        clinical_data.setdefault("diagnosis", [])
+        clinical_data.setdefault("medications", [])
+        clinical_data.setdefault("observations", [])
+        clinical_data.setdefault("allergies", [])
+        clinical_data.setdefault("differential_diagnosis", [])
+        clinical_data.setdefault("risk_factors", [])
+        clinical_data.setdefault("recommended_tests", [])
+        clinical_data.setdefault("follow_up", None)
+        clinical_data.setdefault("clinical_notes", None)
+
+        # Coerce None lists to empty lists (Gemini sometimes returns null for arrays)
+        for list_key in (
+            "symptoms", "diagnosis", "medications", "observations",
+            "allergies", "differential_diagnosis", "risk_factors",
+            "recommended_tests",
+        ):
+            if clinical_data.get(list_key) is None:
+                clinical_data[list_key] = []
+
+        if clinical_data.get("vitals") is None:
+            clinical_data["vitals"] = {}
+        if clinical_data.get("patient_info") is None:
+            clinical_data["patient_info"] = {}
 
         # Update session with clinical note
         try:
             session.clinical_note = ClinicalNote(**clinical_data)
         except Exception as e:
             logger.warning(
-                f"Could not parse clinical data into ClinicalNote model: {e}"
+                "Could not parse clinical data into ClinicalNote model: %s", e
             )
             # Still send the raw data to frontend
-            pass
 
-        # Run Clinical Decision Support checks first (needed for DetectedIssue FHIR resources)
-        cds_alerts = check_clinical_alerts(clinical_data)
+        # Run Clinical Decision Support checks (needed for DetectedIssue FHIR resources)
+        try:
+            cds_alerts = check_clinical_alerts(clinical_data)
+        except Exception as e:
+            logger.error("CDS check failed: %s", e, exc_info=True)
+            cds_alerts = []
 
         # Build FHIR bundle (includes DetectedIssue from CDS alerts)
-        fhir_bundle = fhir_builder.build_bundle(clinical_data, cds_alerts=cds_alerts)
+        try:
+            fhir_bundle = fhir_builder.build_bundle(clinical_data, cds_alerts=cds_alerts)
+        except Exception as e:
+            logger.error("FHIR bundle build failed: %s", e, exc_info=True)
+            fhir_bundle = {
+                "resourceType": "Bundle",
+                "type": "collection",
+                "entry": [],
+            }
         session.fhir_bundle = fhir_bundle
 
         # Send clinical note
@@ -314,13 +436,24 @@ async def _process_and_send(
         )
 
         # Terminology validation
-        terminology = validate_clinical_data(clinical_data)
+        try:
+            terminology = validate_clinical_data(clinical_data)
+        except Exception as e:
+            logger.error("Terminology validation failed: %s", e, exc_info=True)
+            terminology = {
+                "score_boost": 0,
+                "valid_count": 0,
+                "total_count": 0,
+                "validation_ratio": 0,
+            }
 
         # Send FHIR bundle with quality score + terminology validation
         fhir_quality = _calculate_fhir_quality(fhir_bundle, clinical_data)
         # Boost quality score based on terminology validation
-        if terminology["score_boost"] > 0:
-            fhir_quality["score"] = min(100, fhir_quality["score"] + terminology["score_boost"])
+        if terminology.get("score_boost", 0) > 0:
+            fhir_quality["score"] = min(
+                100, fhir_quality["score"] + terminology["score_boost"]
+            )
             fhir_quality["terminology"] = {
                 "validated": terminology["valid_count"],
                 "total": terminology["total_count"],
@@ -328,7 +461,12 @@ async def _process_and_send(
             }
             # Recalculate grade
             s = fhir_quality["score"]
-            fhir_quality["grade"] = "A" if s >= 90 else "B" if s >= 75 else "C" if s >= 60 else "D"
+            fhir_quality["grade"] = (
+                "A" if s >= 90
+                else "B" if s >= 75
+                else "C" if s >= 60
+                else "D"
+            )
 
         await websocket.send_json(
             {
@@ -350,9 +488,14 @@ async def _process_and_send(
         await websocket.send_json(
             {"type": "processing", "status": "completed"}
         )
+        logger.info(
+            "Processing completed for session %s — %d FHIR resources, %d CDS alerts",
+            session.id,
+            len(fhir_bundle.get("entry", [])),
+            len(cds_alerts),
+        )
 
     except Exception as e:
-        logger.error(f"Processing error: {e}")
-        await websocket.send_json(
-            {"type": "error", "message": f"Processing error: {str(e)}"}
-        )
+        logger.error("Processing error for session %s: %s", session.id, e, exc_info=True)
+        await _send_error(websocket, f"Processing error: {str(e)}")
+        await websocket.send_json({"type": "processing", "status": "completed"})

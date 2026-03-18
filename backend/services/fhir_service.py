@@ -191,9 +191,9 @@ class FHIRBundleBuilder:
         }
 
     def _build_condition(self, diagnosis: dict) -> dict:
-        condition_name = diagnosis.get("condition", "Unknown")
-        icd10_code = diagnosis.get("icd10_code", "")
-        certainty = diagnosis.get("certainty", "suspected")
+        condition_name = diagnosis.get("condition") or "Unknown"
+        icd10_code = diagnosis.get("icd10_code") or ""
+        certainty = diagnosis.get("certainty") or "suspected"
 
         verification_map = {
             "confirmed": "confirmed",
@@ -306,7 +306,7 @@ class FHIRBundleBuilder:
         return observations
 
     def _build_symptom_observation(self, symptom: dict) -> dict:
-        description = symptom.get("description", "Unknown symptom")
+        description = symptom.get("description") or "Unknown symptom"
         duration = symptom.get("duration")
         severity = symptom.get("severity")
 
@@ -363,12 +363,12 @@ class FHIRBundleBuilder:
         return obs
 
     def _build_medication_request(self, medication: dict) -> dict:
-        name = medication.get("name", "Unknown")
-        generic_name = medication.get("generic_name", name)
-        dosage = medication.get("dosage", "")
-        frequency = medication.get("frequency", "")
-        duration = medication.get("duration", "")
-        route = medication.get("route", "oral")
+        name = medication.get("name") or "Unknown"
+        generic_name = medication.get("generic_name") or name
+        dosage = medication.get("dosage") or ""
+        frequency = medication.get("frequency") or ""
+        duration = medication.get("duration") or ""
+        route = medication.get("route") or "oral"
 
         resource = {
             "resourceType": "MedicationRequest",
@@ -392,7 +392,9 @@ class FHIRBundleBuilder:
             "authoredOn": self._now_iso(),
             "dosageInstruction": [
                 {
-                    "text": f"{dosage} {frequency} for {duration}",
+                    "text": " ".join(
+                        p for p in [dosage, frequency, f"for {duration}" if duration else None] if p
+                    ),
                     "route": {
                         "coding": [
                             {

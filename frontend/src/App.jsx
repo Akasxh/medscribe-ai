@@ -21,6 +21,7 @@ import PrescriptionQR from './components/PrescriptionQR'
 import ConsentBanner from './components/ConsentBanner'
 import useWebSocket from './hooks/useWebSocket'
 import useAudioRecorder from './hooks/useAudioRecorder'
+import LanguageSelector from './components/LanguageSelector'
 import ToastContainer from './components/ToastNotification'
 import LandingHero from './components/LandingHero'
 import { FileJson, ClipboardList, Shield, RotateCcw } from 'lucide-react'
@@ -46,6 +47,8 @@ export default function App() {
   const [specialty, setSpecialty] = useState('general')
   const [abhaId, setAbhaId] = useState(null)
   const [consented, setConsented] = useState(() => sessionStorage.getItem('medscribe_consent') === 'true')
+  const [speechLang, setSpeechLang] = useState('hi-IN')
+  const [useSarvam, setUseSarvam] = useState(false)
   const hasStartedRef = useRef(false)
 
   const handleNewConsultation = useCallback(() => {
@@ -78,7 +81,16 @@ export default function App() {
     else if (action === 'process') ws.sendProcess()
   }, [ws])
 
-  const recorder = useAudioRecorder(handleTranscript, handleVoiceCommand)
+  const recorder = useAudioRecorder(handleTranscript, handleVoiceCommand, speechLang, useSarvam)
+
+  const handleSpeechLangChange = useCallback((lang) => {
+    setSpeechLang(lang)
+    // If currently recording, restart with new language
+    if (recorder.isRecording) {
+      recorder.stopRecording()
+      setTimeout(() => recorder.startRecording(), 200)
+    }
+  }, [recorder])
 
   const handleSpecialtyChange = useCallback((value) => {
     setSpecialty(value)
@@ -166,17 +178,29 @@ export default function App() {
           </>
         ) : (
           <>
-            {/* Active session: compact top bar */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <SpecialtySelector value={specialty} onChange={handleSpecialtyChange} />
+            {/* Active session: specialty selector gets its own row on mobile */}
+            <div className="space-y-3 sm:space-y-0">
+              {/* Specialty selector — full width on mobile */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <SpecialtySelector value={specialty} onChange={handleSpecialtyChange} />
+                </div>
+                <button
+                  onClick={handleNewConsultation}
+                  disabled={recorder.isRecording}
+                  className="flex items-center gap-1.5 px-3 py-2.5 min-h-[48px] text-sm sm:text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                >
+                  <RotateCcw className="w-4 h-4 sm:w-3 sm:h-3" />
+                  <span className="hidden sm:inline">New</span>
+                </button>
+              </div>
+              {/* Consultation phase + desktop metrics — second row */}
+              <div className="flex items-center justify-between gap-2 sm:mt-2">
                 <ConsultationPhase
                   clinicalNote={ws.clinicalNote}
                   isRecording={recorder.isRecording}
                   processing={ws.processing}
                 />
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
                 <div className="hidden sm:block">
                   <MetricsBar
                     elapsed={recorder.elapsed}
@@ -185,14 +209,6 @@ export default function App() {
                     processing={ws.processing}
                   />
                 </div>
-                <button
-                  onClick={handleNewConsultation}
-                  disabled={recorder.isRecording}
-                  className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  New
-                </button>
               </div>
             </div>
 
@@ -213,6 +229,9 @@ export default function App() {
 
             {/* Recording card — compact with inline demo toggle */}
             <div className="card p-3">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <LanguageSelector value={speechLang} onChange={handleSpeechLangChange} useSarvam={useSarvam} onSarvamChange={setUseSarvam} />
+              </div>
               <RecordButton
                 isRecording={recorder.isRecording}
                 elapsed={recorder.elapsed}
@@ -253,27 +272,27 @@ export default function App() {
               {/* Right: Tabbed content (Note / FHIR / Safety) */}
               <div className="space-y-3">
                 {/* Tab switcher — mobile only */}
-                <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl lg:hidden">
+                <div className="flex gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl lg:hidden">
                   <button
                     onClick={() => setActiveTab('note')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 min-h-[44px] px-1 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-2 min-h-[48px] px-2 rounded-lg text-sm font-medium transition-all ${
                       activeTab === 'note'
                         ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
                         : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
-                    <ClipboardList className="w-3.5 h-3.5" />
+                    <ClipboardList className="w-4 h-4" />
                     Note
                   </button>
                   <button
                     onClick={() => setActiveTab('fhir')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 min-h-[44px] px-1 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-2 min-h-[48px] px-2 rounded-lg text-sm font-medium transition-all ${
                       activeTab === 'fhir'
                         ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
                         : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
-                    <FileJson className="w-3.5 h-3.5" />
+                    <FileJson className="w-4 h-4" />
                     FHIR
                     {resourceCount > 0 && (
                       <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center">
@@ -283,13 +302,13 @@ export default function App() {
                   </button>
                   <button
                     onClick={() => setActiveTab('cds')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 min-h-[44px] px-1 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-2 min-h-[48px] px-2 rounded-lg text-sm font-medium transition-all ${
                       activeTab === 'cds'
                         ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
                         : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
-                    <Shield className="w-3.5 h-3.5" />
+                    <Shield className="w-4 h-4" />
                     Safety
                     {ws.cdsAlerts.length > 0 && (
                       <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">

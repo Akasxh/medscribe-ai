@@ -16,8 +16,18 @@ function detectCommand(text) {
   return null
 }
 
-export default function useAudioRecorder(onTranscript, onCommand) {
+/** Determine the backend URL for the /api/transcribe endpoint. */
+function getTranscribeUrl() {
+  // In dev mode Vite proxies /api to the backend; in prod it's same-origin.
+  const base = import.meta.env.VITE_API_URL || ''
+  return `${base}/api/transcribe`
+}
+
+export default function useAudioRecorder(onTranscript, onCommand, language = 'hi-IN', useSarvam = false) {
   const recognitionRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const chunksRef = useRef([])
+  const sarvamIntervalRef = useRef(null)
   const [isRecording, setIsRecording] = useState(false)
   const isRecordingRef = useRef(false)
   const [elapsed, setElapsed] = useState(0)
@@ -28,13 +38,129 @@ export default function useAudioRecorder(onTranscript, onCommand) {
   const commandTimeoutRef = useRef(null)
 
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SpeechRecognition) {
+    if (useSarvam) {
+      // Sarvam mode uses MediaRecorder — check for it
+      if (!navigator.mediaDevices || !window.MediaRecorder) {
+        setSupported(false)
+      } else {
+        setSupported(true)
+      }
+    } else {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+      if (!SpeechRecognition) {
+        setSupported(false)
+      } else {
+        setSupported(true)
+      }
+    }
+  }, [useSarvam])
+
+  /** Send accumulated audio chunks to Sarvam API. */
+  const sendChunksToSarvam = useCallback(async () => {
+    if (chunksRef.current.length === 0) return
+
+    const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+    chunksRef.current = []
+
+    if (blob.size < 1000) return // Skip tiny chunks
+
+    const formData = new FormData()
+    formData.append('file', blob, 'audio.webm')
+    formData.append('language', language)
+
+    try {
+      const res = await fetch(getTranscribeUrl(), {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (data.transcript && data.transcript.trim()) {
+        const text = data.transcript.trim()
+        // Check for voice commands
+        const command = detectCommand(text)
+        if (command) {
+          setLastCommand(command)
+          if (commandTimeoutRef.current) clearTimeout(commandTimeoutRef.current)
+          commandTimeoutRef.current = setTimeout(() => setLastCommand(null), 2000)
+          onCommand?.(command)
+          return
+        }
+        fullTranscriptRef.current.push(text)
+        onTranscript?.(text, true)
+      }
+    } catch (err) {
+      console.error('Sarvam STT fetch error:', err)
+    }
+  }, [language, onTranscript, onCommand])
+
+  /** Start recording with Sarvam AI (MediaRecorder -> REST API). */
+  const startSarvamRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : 'audio/webm',
+      })
+
+      chunksRef.current = []
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data)
+        }
+      }
+
+      mediaRecorder.onstop = () => {
+        // Send any remaining chunks
+        sendChunksToSarvam()
+        // Stop all tracks
+        stream.getTracks().forEach((t) => t.stop())
+      }
+
+      mediaRecorderRef.current = mediaRecorder
+      mediaRecorder.start(1000) // Collect 1s chunks
+
+      // Send to Sarvam every 5 seconds
+      sarvamIntervalRef.current = setInterval(() => {
+        if (chunksRef.current.length > 0) {
+          sendChunksToSarvam()
+        }
+      }, 5000)
+
+      setIsRecording(true)
+      isRecordingRef.current = true
+      setElapsed(0)
+      fullTranscriptRef.current = []
+
+      timerRef.current = setInterval(() => {
+        setElapsed((prev) => prev + 1)
+      }, 1000)
+    } catch (err) {
+      console.error('Failed to start Sarvam recording:', err)
       setSupported(false)
+    }
+  }, [sendChunksToSarvam])
+
+  /** Stop Sarvam recording. */
+  const stopSarvamRecording = useCallback(() => {
+    if (sarvamIntervalRef.current) {
+      clearInterval(sarvamIntervalRef.current)
+      sarvamIntervalRef.current = null
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+      mediaRecorderRef.current = null
+    }
+    setIsRecording(false)
+    isRecordingRef.current = false
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
     }
   }, [])
 
-  const startRecording = useCallback(() => {
+  /** Start recording with Web Speech API (browser-native). */
+  const startBrowserRecording = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognition) {
       setSupported(false)
@@ -44,7 +170,7 @@ export default function useAudioRecorder(onTranscript, onCommand) {
     const recognition = new SpeechRecognition()
     recognition.continuous = true
     recognition.interimResults = true
-    recognition.lang = 'hi-IN' // Hindi with English code-mixing support
+    recognition.lang = language
     recognition.maxAlternatives = 1
 
     recognition.onresult = (event) => {
@@ -103,12 +229,13 @@ export default function useAudioRecorder(onTranscript, onCommand) {
     timerRef.current = setInterval(() => {
       setElapsed((prev) => prev + 1)
     }, 1000)
-  }, [onTranscript, onCommand])
+  }, [onTranscript, onCommand, language])
 
-  const stopRecording = useCallback(() => {
+  /** Stop browser-native recording. */
+  const stopBrowserRecording = useCallback(() => {
     if (recognitionRef.current) {
       isRecordingRef.current = false
-      setIsRecording(false) // Set first so onend doesn't restart
+      setIsRecording(false)
       recognitionRef.current.stop()
       recognitionRef.current = null
     }
@@ -118,6 +245,22 @@ export default function useAudioRecorder(onTranscript, onCommand) {
     }
   }, [])
 
+  const startRecording = useCallback(() => {
+    if (useSarvam) {
+      startSarvamRecording()
+    } else {
+      startBrowserRecording()
+    }
+  }, [useSarvam, startSarvamRecording, startBrowserRecording])
+
+  const stopRecording = useCallback(() => {
+    if (useSarvam) {
+      stopSarvamRecording()
+    } else {
+      stopBrowserRecording()
+    }
+  }, [useSarvam, stopSarvamRecording, stopBrowserRecording])
+
   const getFullTranscript = useCallback(() => {
     return fullTranscriptRef.current.join(' ')
   }, [])
@@ -125,7 +268,11 @@ export default function useAudioRecorder(onTranscript, onCommand) {
   useEffect(() => {
     return () => {
       if (recognitionRef.current) recognitionRef.current.stop()
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop()
+      }
       if (timerRef.current) clearInterval(timerRef.current)
+      if (sarvamIntervalRef.current) clearInterval(sarvamIntervalRef.current)
       if (commandTimeoutRef.current) clearTimeout(commandTimeoutRef.current)
     }
   }, [])

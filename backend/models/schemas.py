@@ -22,6 +22,7 @@ class Vitals(BaseModel):
     pulse: Optional[str] = None
     spo2: Optional[str] = None
     weight: Optional[str] = None
+    respiratory_rate: Optional[str] = None
 
 
 class Diagnosis(BaseModel):

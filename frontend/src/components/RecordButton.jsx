@@ -27,8 +27,8 @@ export default function RecordButton({ isRecording, elapsed, supported, processi
   if (!supported) {
     return (
       <div className="flex flex-col items-center gap-3 py-4 sm:py-6">
-        <div className="w-[72px] h-[72px] rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-          <MicOff className="w-7 h-7 text-slate-400" />
+        <div className="w-[80px] h-[80px] sm:w-[72px] sm:h-[72px] rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+          <MicOff className="w-8 h-8 sm:w-7 sm:h-7 text-slate-400" />
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 text-center max-w-xs">
           Speech recognition is not supported in this browser. Please use Chrome or Edge.
@@ -40,8 +40,8 @@ export default function RecordButton({ isRecording, elapsed, supported, processi
   if (processing) {
     return (
       <div className="flex flex-col items-center gap-4 py-4 sm:py-6">
-        <div className="w-[72px] h-[72px] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-          <Loader2 className="w-7 h-7 text-blue-600 animate-spin" />
+        <div className="w-[80px] h-[80px] sm:w-[72px] sm:h-[72px] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 sm:w-7 sm:h-7 text-blue-600 animate-spin" />
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
           Processing...
@@ -75,7 +75,7 @@ export default function RecordButton({ isRecording, elapsed, supported, processi
         role="switch"
         aria-checked={isRecording}
         className={`
-          relative w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all duration-300
+          relative w-[80px] h-[80px] sm:w-[72px] sm:h-[72px] rounded-full flex items-center justify-center transition-all duration-300
           ${isRecording
             ? 'bg-red-500 text-white shadow-lg shadow-red-500/25 hover:bg-red-600 active:scale-95'
             : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-lg shadow-blue-600/30'
@@ -99,7 +99,7 @@ export default function RecordButton({ isRecording, elapsed, supported, processi
       {isRecording && <WaveformBars />}
 
       {/* Action hint */}
-      <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+      <p className="text-sm sm:text-xs text-slate-400 dark:text-slate-500 font-medium">
         {isRecording ? 'Tap to stop' : 'Tap to start recording'}
       </p>
 

@@ -108,7 +108,7 @@ export default function ConsultationSummary({ clinicalNote, fhirQuality, cdsAler
                 <span className="text-[10px] text-slate-400">{Math.round(elapsed)}s</span>
               </div>
             ) : (
-              <div className="text-sm text-slate-400">--</div>
+              <div className="text-sm font-semibold text-blue-600 dark:text-blue-400">&lt; 1 min</div>
             )}
           </div>
         </div>

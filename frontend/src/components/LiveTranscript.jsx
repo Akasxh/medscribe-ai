@@ -82,7 +82,7 @@ export default function LiveTranscript({ transcript, interimText, isRecording })
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="relative p-4 min-h-[140px] max-h-[420px] overflow-y-auto scroll-smooth"
+        className="relative p-4 pb-16 min-h-[180px] max-h-[420px] overflow-y-auto scroll-smooth"
       >
         {!hasContent ? (
           <div className="flex flex-col items-center justify-center py-10 text-slate-400 dark:text-slate-500">
@@ -100,7 +100,7 @@ export default function LiveTranscript({ transcript, interimText, isRecording })
                 }`}
               >
                 <div className="w-0.5 self-stretch bg-blue-400 dark:bg-blue-500 rounded-full flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed flex-1">
+                <p className="text-[15px] sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed flex-1">
                   {line}
                 </p>
                 <span className="text-[10px] text-slate-300 dark:text-slate-600 tabular-nums flex-shrink-0 mt-0.5 font-mono">
@@ -114,7 +114,7 @@ export default function LiveTranscript({ transcript, interimText, isRecording })
               <div className="flex items-start gap-3 py-2.5">
                 <div className="w-0.5 self-stretch bg-slate-200 dark:bg-slate-600 rounded-full flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm text-slate-400 dark:text-slate-500 italic leading-relaxed">
+                  <p className="text-[15px] sm:text-sm text-slate-400 dark:text-slate-500 italic leading-relaxed">
                     {interimText}
                   </p>
                 </div>
@@ -139,7 +139,7 @@ export default function LiveTranscript({ transcript, interimText, isRecording })
         {userScrolled && hasContent && (
           <button
             onClick={scrollToBottom}
-            className="sticky bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-1.5 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 shadow-md text-xs text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors z-10"
+            className="sticky bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-4 py-2.5 min-h-[48px] rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 shadow-md text-sm sm:text-xs text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-600 active:bg-slate-100 transition-colors z-10"
           >
             <ChevronDown className="w-3 h-3" />
             Latest
