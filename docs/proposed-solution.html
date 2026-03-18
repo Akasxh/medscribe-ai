@@ -542,8 +542,18 @@
     Condition, Observation, MedicationRequest, AllergyIntolerance, CarePlan, and ServiceRequest resources.
     The system learns continuously: when a doctor corrects an extraction, that correction is stored and
     injected as a few-shot example into future calls, improving accuracy without model retraining.
-    <strong>Zero API cost for speech recognition</strong>&mdash;we leverage the browser's native Web Speech
-    API&mdash;makes this viable even in resource-constrained settings.
+  </p>
+
+  <p>
+    MedScribe AI goes beyond English and Hindi. With <strong>Sarvam AI integration</strong> for server-side
+    speech-to-text, the system now supports <strong>10 Indian languages</strong> including Tamil, Telugu,
+    Bengali, Marathi, Gujarati, Kannada, and Malayalam&mdash;with full code-mixed support (Hinglish,
+    Tanglish, and more). Doctors can toggle between the zero-cost browser STT and Sarvam AI's superior
+    accuracy for Indian languages. A <strong>digital prescription system with QR codes</strong> lets patients
+    scan and view their prescription on any phone, while a <strong>Patient Safety Score</strong> (0&ndash;100)
+    provides an at-a-glance clinical risk assessment. A <strong>patient consent recording</strong> mechanism
+    ensures GDPR-style compliance before any recording begins, and <strong>13 clinical nudge rules</strong>
+    prompt doctors when critical history elements are missing from the conversation.
   </p>
 
   <div class="page-footer">MedScribe AI &mdash; HACKMATRIX 2.0 &nbsp;&middot;&nbsp; Page 2</div>
@@ -566,8 +576,8 @@
       <div class="arch-detail">
         React 18 + Vite<br>
         Tailwind CSS<br>
-        Web Speech API<br>
-        Mobile-First UI
+        Web Speech / Sarvam AI<br>
+        10 Languages + QR Rx
       </div>
     </div>
     <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 4px;">
@@ -580,8 +590,8 @@
       <div class="arch-detail">
         Python FastAPI<br>
         WebSocket Manager<br>
-        CDS Engine<br>
-        Learning Service
+        CDS + Safety Score<br>
+        Clinical Nudges
       </div>
     </div>
     <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 4px;">
@@ -593,21 +603,23 @@
       <div class="arch-title" style="color: var(--violet);">AI &amp; FHIR Layer</div>
       <div class="arch-detail">
         Gemini 2.5 Flash<br>
-        Clinical Extraction<br>
+        Batch Extraction<br>
         FHIR R4 Mapper<br>
-        Quality Scoring
+        59 Drug Mappings
       </div>
     </div>
   </div>
 
   <h3>Data Flow</h3>
   <p>
-    The browser captures speech via the Web Speech API (supporting Hindi + English), streams
-    recognized text over a WebSocket to the FastAPI backend. Accumulated transcript segments
-    are batched every 10&ndash;15 seconds and sent to Gemini 2.5 Flash with a structured clinical
-    extraction prompt. The AI returns structured JSON which is mapped to FHIR R4 resources,
-    scored for completeness, and run through the CDS engine for safety checks. All results
-    stream back to the frontend over the same WebSocket connection.
+    The browser captures speech via either the native Web Speech API or <strong>Sarvam AI's
+    server-side STT</strong> (supporting 22 Indian languages with code-mixed speech). Doctors
+    select their preferred language and STT engine from an in-app selector. Recognized text
+    streams over a WebSocket to the FastAPI backend. At session end, the full transcript is
+    sent to Gemini 2.5 Flash in a single <strong>batch extraction</strong> call&mdash;eliminating
+    data loss from incremental overwrites. The AI returns structured JSON which is mapped to
+    FHIR R4 resources, scored for completeness, and run through the CDS engine for safety
+    checks. All results stream back to the frontend over the same WebSocket connection.
   </p>
 
   <h3>Technology Stack</h3>
@@ -617,7 +629,7 @@
     </thead>
     <tbody>
       <tr><td>Frontend</td><td>React 18, Vite, Tailwind CSS</td><td>PWA-capable, fast HMR, mobile-first utility CSS</td></tr>
-      <tr><td>Speech-to-Text</td><td>Web Speech API (browser-native)</td><td>Zero API cost, Hindi-English support, no latency</td></tr>
+      <tr><td>Speech-to-Text</td><td>Web Speech API + Sarvam AI</td><td>Dual-mode: free browser STT or Sarvam AI for 22 Indian languages</td></tr>
       <tr><td>Backend</td><td>Python FastAPI + WebSocket</td><td>Async-native, auto-docs, WebSocket first-class</td></tr>
       <tr><td>AI Extraction</td><td>Google Gemini 2.5 Flash</td><td>Fast structured output, code-mixed understanding</td></tr>
       <tr><td>FHIR Mapping</td><td>Custom Python + Pydantic models</td><td>Type-safe R4 resource generation with validation</td></tr>
@@ -628,9 +640,11 @@
 
   <h3>Security &amp; Privacy Considerations</h3>
   <ul>
-    <li>Speech processed in-browser&mdash;raw audio never leaves the device</li>
+    <li>Speech processed in-browser (Web Speech API) or via encrypted API call (Sarvam AI)&mdash;raw audio never stored</li>
+    <li><strong>GDPR-style patient consent recording</strong> required before any recording session begins</li>
     <li>WebSocket connection scoped to session; no persistent patient data stored on server</li>
     <li>FHIR resources generated on-demand, exportable as local JSON files</li>
+    <li><strong>Doctor registration &amp; authentication</strong> with hospital affiliation and session persistence</li>
     <li>No patient identifiers stored in correction/learning data</li>
     <li>PWA supports offline-capable UI shell via service worker caching</li>
   </ul>
@@ -652,12 +666,13 @@
   <div class="feature-grid">
     <div class="feature-card">
       <div class="feature-num">Feature 01</div>
-      <h4>Hindi-English Code-Mixed Understanding</h4>
+      <h4>10 Indian Languages + Code-Mixed Speech</h4>
       <p>
-        Natively handles conversations where doctors and patients switch freely between Hindi and
-        English. Extracts clinical entities from phrases like <em>"pet mein dard"</em> (abdominal pain)
-        and maps Indian drug brand names (Crocin, Combiflam) to their generic equivalents with
-        correct RxNorm codes.
+        Supports Hindi, English, Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, and Malayalam
+        with full code-mixed support (Hinglish, Tanglish). Dual STT: browser-native Web Speech API
+        (free) or <strong>Sarvam AI</strong> server-side STT with 22 Indian languages. Maps
+        <strong>59 Indian drug brand names</strong> to generic equivalents with RxNorm codes and
+        standard dosages.
       </p>
     </div>
 
@@ -707,12 +722,35 @@
 
     <div class="feature-card">
       <div class="feature-num">Feature 06</div>
-      <h4>Export Suite &amp; Demo Mode</h4>
+      <h4>Digital Prescription with QR Code</h4>
       <p>
-        One-click export to <strong>print-ready clinical notes</strong> (opens browser print dialog),
-        <strong>FHIR Bundle JSON download</strong>, and <strong>clipboard copy</strong>. Built-in demo
-        mode with 3 pre-loaded scenarios (Viral Fever, Diabetes Follow-Up, Cardiac + Safety Alerts)
-        ensures reliable presentations even without live microphone access.
+        End-of-session QR code generation linking to <code>/rx/{sessionId}</code>. Patient scans the code
+        to view a formatted prescription page with patient info, medications table, diagnosis, and
+        follow-up instructions&mdash;accessible on any smartphone without app installation.
+      </p>
+    </div>
+  </div>
+
+  <div class="feature-grid" style="margin-top: 0;">
+    <div class="feature-card">
+      <div class="feature-num">Feature 07</div>
+      <h4>Patient Safety Score</h4>
+      <p>
+        A composite <strong>0&ndash;100 clinical risk score</strong> computed from CDS alerts, missing
+        history elements, allergy checks, and medication safety. Displayed as an animated SVG
+        visualization with color-coded severity (green/amber/red), giving doctors an instant
+        at-a-glance risk assessment.
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-num">Feature 08</div>
+      <h4>Clinical Nudges &amp; Batch Extraction</h4>
+      <p>
+        <strong>13 AI-powered nudge rules</strong> prompt the doctor for missing history elements
+        (e.g., allergy history, family history, medication reconciliation). <strong>Batch extraction</strong>
+        sends the full transcript to Gemini in one shot at session end, eliminating data loss from
+        incremental overwrites.
       </p>
     </div>
   </div>
@@ -723,12 +761,12 @@
       <tr><th>Capability</th><th>Description</th></tr>
     </thead>
     <tbody>
+      <tr><td>Doctor Registration</td><td>Login screen with doctor name, ID, hospital affiliation. Session persistence across visits</td></tr>
+      <tr><td>Patient Consent</td><td>GDPR-style consent banner before recording starts; ensures regulatory compliance</td></tr>
+      <tr><td>59 Drug Brand Mappings</td><td>Comprehensive Indian drug reference with brand-to-generic mapping, standard dosages, and use cases</td></tr>
       <tr><td>FHIR Quality Scoring</td><td>Automated Grade A&ndash;D scoring checking resource completeness, coding systems, and cross-references</td></tr>
-      <tr><td>Risk Factors &amp; Tests</td><td>AI identifies patient risk factors and suggests appropriate diagnostic tests</td></tr>
-      <tr><td>Dark Mode</td><td>Full dark theme support for low-light clinical environments (night shifts, ICU)</td></tr>
-      <tr><td>PWA Install</td><td>Installable on mobile home screen; offline UI shell via service worker</td></tr>
-      <tr><td>Real-Time Streaming</td><td>WebSocket-based incremental updates; transcript + note + FHIR update simultaneously</td></tr>
-      <tr><td>Toast Notifications</td><td>Non-blocking alerts for CDS warnings, extraction status, and connection state</td></tr>
+      <tr><td>Export Suite</td><td>Print-ready notes, FHIR Bundle JSON download, clipboard copy, and QR-based digital prescriptions</td></tr>
+      <tr><td>Dark Mode + PWA</td><td>Full dark theme for low-light clinical environments; installable on mobile home screen</td></tr>
     </tbody>
   </table>
 
@@ -758,8 +796,8 @@
     </thead>
     <tbody>
       <tr>
-        <td><strong>Hindi-English Code-Mixed</strong></td>
-        <td><span class="check">&#10004;</span> Native</td>
+        <td><strong>Indian Languages (10+)</strong></td>
+        <td><span class="check">&#10004;</span> 10 languages</td>
         <td><span class="cross">&#10008;</span> English only</td>
         <td><span class="cross">&#10008;</span> English only</td>
         <td><span class="cross">&#10008;</span> English only</td>
@@ -780,7 +818,7 @@
       </tr>
       <tr>
         <td><strong>Indian Drug Brand Mapping</strong></td>
-        <td><span class="check">&#10004;</span> Crocin &rarr; Paracetamol</td>
+        <td><span class="check">&#10004;</span> 59 brands mapped</td>
         <td><span class="cross">&#10008;</span></td>
         <td><span class="cross">&#10008;</span></td>
         <td><span class="cross">&#10008;</span></td>
@@ -793,8 +831,22 @@
         <td><span class="partial">&#9679;</span> Basic</td>
       </tr>
       <tr>
+        <td><strong>Digital Prescription (QR)</strong></td>
+        <td><span class="check">&#10004;</span> QR scannable</td>
+        <td><span class="cross">&#10008;</span></td>
+        <td><span class="partial">&#9679;</span> Via EHR</td>
+        <td><span class="cross">&#10008;</span></td>
+      </tr>
+      <tr>
+        <td><strong>Patient Safety Score</strong></td>
+        <td><span class="check">&#10004;</span> 0&ndash;100 composite</td>
+        <td><span class="cross">&#10008;</span></td>
+        <td><span class="cross">&#10008;</span></td>
+        <td><span class="cross">&#10008;</span></td>
+      </tr>
+      <tr>
         <td><strong>Speech API Cost</strong></td>
-        <td><span class="check">&#10004;</span> $0 (browser-native)</td>
+        <td><span class="check">&#10004;</span> $0 or free credits</td>
         <td>Proprietary</td>
         <td>Proprietary</td>
         <td>Proprietary</td>
@@ -820,16 +872,16 @@
 
   <div class="metrics-row">
     <div class="metric-box">
-      <div class="metric-value">13&times;</div>
-      <div class="metric-label">Faster<br>Documentation</div>
+      <div class="metric-value">10</div>
+      <div class="metric-label">Indian<br>Languages</div>
     </div>
     <div class="metric-box">
-      <div class="metric-value">$0</div>
-      <div class="metric-label">Speech API<br>Cost</div>
+      <div class="metric-value">59</div>
+      <div class="metric-label">Drug Brand<br>Mappings</div>
     </div>
     <div class="metric-box">
-      <div class="metric-value">23</div>
-      <div class="metric-label">Safety Rules<br>(CDS Engine)</div>
+      <div class="metric-value">36</div>
+      <div class="metric-label">Safety Rules<br>(CDS + Nudges)</div>
     </div>
     <div class="metric-box">
       <div class="metric-value">8</div>
@@ -897,19 +949,20 @@
 
   <div class="timeline">
     <div class="timeline-item">
-      <div class="timeline-phase">Phase 1 &mdash; Now</div>
-      <h4>Hackathon MVP</h4>
-      <p>Hindi-English ambient scribe, FHIR R4 output, CDS engine, differential diagnosis, demo mode, PWA.</p>
+      <div class="timeline-phase">Phase 1 &mdash; Delivered (Hackathon)</div>
+      <h4>Full-Featured MVP</h4>
+      <p>10 Indian languages via Sarvam AI + browser STT, FHIR R4 output, CDS engine, differential diagnosis,
+        digital prescriptions with QR, patient safety score, clinical nudges, doctor registration, batch extraction, demo mode, PWA.</p>
     </div>
     <div class="timeline-item">
       <div class="timeline-phase">Phase 2 &mdash; Q2 2026</div>
-      <h4>Regional Language Expansion</h4>
-      <p>Add Tamil, Telugu, Bengali, Marathi support. Fine-tune extraction for regional medical terminology and prescription patterns.</p>
+      <h4>EHR Integration &amp; ABDM Bridge</h4>
+      <p>Direct integration with Indian EHR systems (Bahmni, OpenMRS). ABDM Health Information Provider (HIP) module for national health record exchange.</p>
     </div>
     <div class="timeline-item">
       <div class="timeline-phase">Phase 3 &mdash; Q3 2026</div>
-      <h4>EHR Integration &amp; ABDM Bridge</h4>
-      <p>Direct integration with Indian EHR systems (Bahmni, OpenMRS). ABDM Health Information Provider (HIP) module for national health record exchange.</p>
+      <h4>Specialty-Specific Models</h4>
+      <p>Tailored extraction prompts and drug databases for cardiology, pediatrics, obstetrics, and ophthalmology. Specialty-aware CDS rules and FHIR profiles.</p>
     </div>
     <div class="timeline-item">
       <div class="timeline-phase">Phase 4 &mdash; Q4 2026</div>

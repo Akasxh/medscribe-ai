@@ -368,16 +368,19 @@ async def _process_and_send(
             logger.warning(
                 "Could not parse clinical data into ClinicalNote model: %s", e
             )
-            # Fallback: build ClinicalNote with safe defaults so /rx/ page works
+            # Fallback: coerce None values and retry with all fields
             try:
-                safe_data = {
-                    "patient_info": clinical_data.get("patient_info", {}),
-                    "chief_complaint": clinical_data.get("chief_complaint", ""),
-                    "history_of_present_illness": clinical_data.get("history_of_present_illness", ""),
-                    "follow_up": clinical_data.get("follow_up"),
-                    "clinical_notes": clinical_data.get("clinical_notes", ""),
-                }
-                session.clinical_note = ClinicalNote(**safe_data)
+                for key, val in clinical_data.items():
+                    if isinstance(val, list):
+                        # Coerce None items in lists and None field values within dicts
+                        clinical_data[key] = [
+                            {k: (v if v is not None else "") for k, v in item.items()}
+                            if isinstance(item, dict) else (item or "")
+                            for item in val if item is not None
+                        ]
+                    elif val is None and key not in ("follow_up",):
+                        clinical_data[key] = "" if isinstance(val, str) or val is None else val
+                session.clinical_note = ClinicalNote(**clinical_data)
             except Exception as e2:
                 logger.error("Fallback ClinicalNote creation also failed: %s", e2)
 
@@ -519,9 +522,9 @@ async def view_prescription_page(session_id: str):
 
     note = session.clinical_note
     patient = note.patient_info or {}
-    patient_name = patient.get("name", "Patient")
-    patient_age = patient.get("age", "")
-    patient_gender = patient.get("gender", "")
+    patient_name = patient.get("name") or "Patient"
+    patient_age = patient.get("age") or ""
+    patient_gender = patient.get("gender") or ""
     date_str = session.created_at.strftime("%d %b %Y, %I:%M %p") if session.created_at else "N/A"
 
     # Build medications HTML
@@ -529,12 +532,17 @@ async def view_prescription_page(session_id: str):
     if note.medications:
         rows = ""
         for i, m in enumerate(note.medications, 1):
+            med_name = m.name or "Unknown"
+            med_generic = m.generic_name or ""
+            med_dosage = m.dosage or "-"
+            med_freq = m.frequency or "-"
+            med_dur = m.duration or "-"
             rows += f"""<tr>
               <td>{i}</td>
-              <td><strong>{m.name}</strong><br><span class="generic">{m.generic_name}</span></td>
-              <td>{m.dosage}</td>
-              <td>{m.frequency}</td>
-              <td>{m.duration}</td>
+              <td><strong>{med_name}</strong><br><span class="generic">{med_generic}</span></td>
+              <td>{med_dosage}</td>
+              <td>{med_freq}</td>
+              <td>{med_dur}</td>
             </tr>"""
         meds_html = f"""<table>
           <thead><tr><th>#</th><th>Medication</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr></thead>
@@ -547,7 +555,7 @@ async def view_prescription_page(session_id: str):
     dx_html = ""
     if note.diagnosis:
         items = "".join(
-            f"<li><strong>{d.condition}</strong> <span class='code'>{d.icd10_code}</span></li>"
+            f"<li><strong>{d.condition or 'Unknown'}</strong> <span class='code'>{d.icd10_code or ''}</span></li>"
             for d in note.diagnosis
         )
         dx_html = f"<div class='section'><h3>Diagnosis</h3><ul>{items}</ul></div>"

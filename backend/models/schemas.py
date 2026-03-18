@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -11,9 +11,14 @@ class SessionStatus(str, Enum):
 
 
 class Symptom(BaseModel):
-    description: str
+    description: Optional[str] = ""
     duration: Optional[str] = None
     severity: Optional[str] = None
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def coerce_none_str(cls, v):
+        return v if v is not None else ""
 
 
 class Vitals(BaseModel):
@@ -26,36 +31,71 @@ class Vitals(BaseModel):
 
 
 class Diagnosis(BaseModel):
-    condition: str
-    icd10_code: str
-    certainty: str = "suspected"  # confirmed, suspected, differential
-    confidence: float = 0.0  # 0.0-1.0 confidence score
+    condition: Optional[str] = ""
+    icd10_code: Optional[str] = ""
+    certainty: Optional[str] = "suspected"
+    confidence: Optional[float] = 0.0
+
+    @field_validator("condition", "icd10_code", "certainty", mode="before")
+    @classmethod
+    def coerce_none_str(cls, v):
+        return v if v is not None else ""
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def coerce_none_float(cls, v):
+        if v is None:
+            return 0.0
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return 0.0
 
 
 class Medication(BaseModel):
-    name: str
-    generic_name: str
-    dosage: str
-    frequency: str
-    duration: str
-    route: str = "oral"
+    name: Optional[str] = ""
+    generic_name: Optional[str] = ""
+    dosage: Optional[str] = ""
+    frequency: Optional[str] = ""
+    duration: Optional[str] = ""
+    route: Optional[str] = "oral"
+
+    @field_validator("name", "generic_name", "dosage", "frequency", "duration", "route", mode="before")
+    @classmethod
+    def coerce_none_str(cls, v):
+        return v if v is not None else ""
 
 
 class DifferentialDiagnosis(BaseModel):
-    condition: str
-    icd10_code: str
-    likelihood: str = "moderate"  # high, moderate, low
-    confidence: float = 0.0  # 0.0-1.0 probability estimate
-    supporting_evidence: str = ""
-    distinguishing_tests: str = ""
+    condition: Optional[str] = ""
+    icd10_code: Optional[str] = ""
+    likelihood: Optional[str] = "moderate"
+    confidence: Optional[float] = 0.0
+    supporting_evidence: Optional[str] = ""
+    distinguishing_tests: Optional[str] = ""
+
+    @field_validator("condition", "icd10_code", "likelihood", "supporting_evidence", "distinguishing_tests", mode="before")
+    @classmethod
+    def coerce_none_str(cls, v):
+        return v if v is not None else ""
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def coerce_none_float(cls, v):
+        if v is None:
+            return 0.0
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return 0.0
 
 
 class ClinicalNote(BaseModel):
     patient_info: dict = Field(
         default_factory=lambda: {"name": None, "age": None, "gender": None}
     )
-    chief_complaint: str = ""
-    history_of_present_illness: str = ""
+    chief_complaint: Optional[str] = ""
+    history_of_present_illness: Optional[str] = ""
     symptoms: List[Symptom] = []
     vitals: Vitals = Field(default_factory=Vitals)
     diagnosis: List[Diagnosis] = []
@@ -66,7 +106,12 @@ class ClinicalNote(BaseModel):
     risk_factors: List[str] = []
     recommended_tests: List[str] = []
     follow_up: Optional[str] = None
-    clinical_notes: str = ""
+    clinical_notes: Optional[str] = ""
+
+    @field_validator("chief_complaint", "history_of_present_illness", "clinical_notes", mode="before")
+    @classmethod
+    def coerce_none_str(cls, v):
+        return v if v is not None else ""
 
 
 class Session(BaseModel):

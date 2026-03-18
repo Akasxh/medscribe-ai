@@ -6,7 +6,9 @@
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="96" fill="url(#grad)"/>
+  <!-- EKG/pulse waveform -->
   <path d="M128 280 L192 280 L224 180 L256 380 L288 220 L320 320 L352 280 L384 280"
         stroke="white" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Stethoscope head accent -->
   <circle cx="384" cy="280" r="20" fill="white" opacity="0.9"/>
 </svg>

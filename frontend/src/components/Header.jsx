@@ -1,4 +1,4 @@
-import { Activity, Moon, Sun, ShieldCheck, LogOut, User } from 'lucide-react'
+import { Moon, Sun, ShieldCheck, LogOut, User } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 export default function Header({ user, onLogout }) {
@@ -24,9 +24,7 @@ export default function Header({ user, onLogout }) {
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm">
-              <Activity className="w-4 h-4 text-white" strokeWidth={2.5} aria-hidden="true" />
-            </div>
+            <img src="/icons/logo.svg" alt="MedScribe AI" className="w-8 h-8 rounded-lg shadow-sm" />
             <span className="text-sm sm:text-base font-semibold tracking-tight text-slate-900 dark:text-white">
               MedScribe<span className="text-blue-600 dark:text-blue-400 ml-0.5 hidden sm:inline">AI</span>
             </span>

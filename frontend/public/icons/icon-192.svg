@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" fill="none">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2563EB;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1D4ED8;stop-opacity:1" />
+    <linearGradient id="grad" x1="0" y1="0" x2="192" y2="192" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
     </linearGradient>
   </defs>
-  <rect width="192" height="192" rx="38" fill="url(#bg)"/>
-  <text x="96" y="72" font-family="system-ui,sans-serif" font-size="42" font-weight="700" fill="white" text-anchor="middle">Med</text>
-  <text x="96" y="118" font-family="system-ui,sans-serif" font-size="34" font-weight="600" fill="#93C5FD" text-anchor="middle">Scribe</text>
-  <text x="96" y="156" font-family="system-ui,sans-serif" font-size="26" font-weight="500" fill="#60A5FA" text-anchor="middle">AI</text>
+  <rect width="192" height="192" rx="36" fill="url(#grad)"/>
+  <path d="M48 105 L72 105 L84 67.5 L96 142.5 L108 82.5 L120 120 L132 105 L144 105"
+        stroke="white" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="144" cy="105" r="7.5" fill="white" opacity="0.9"/>
 </svg>

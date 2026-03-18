@@ -35,6 +35,7 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
   const [supported, setSupported] = useState(true)
   const fullTranscriptRef = useRef([])
   const lastFinalTextRef = useRef('')
+  const lastProcessedIndexRef = useRef(0)
   const [lastCommand, setLastCommand] = useState(null)
   const commandTimeoutRef = useRef(null)
 
@@ -76,7 +77,7 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
       })
       const data = await res.json()
       if (data.transcript && data.transcript.trim()) {
-        const text = data.transcript.trim()
+        let text = data.transcript.trim()
         // Check for voice commands
         const command = detectCommand(text)
         if (command) {
@@ -86,8 +87,22 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
           onCommand?.(command)
           return
         }
-        // Deduplicate: skip if identical to last final text (overlapping chunks)
+        // Deduplicate: skip if identical to last final text
         if (text === lastFinalTextRef.current) return
+        // Strip overlapping prefix: if the new text starts with the end of the last text,
+        // remove the overlapping portion to avoid repeated words from chunk boundaries
+        if (lastFinalTextRef.current) {
+          const lastWords = lastFinalTextRef.current.split(/\s+/)
+          // Check overlap of up to 8 words (typical chunk boundary overlap)
+          for (let overlap = Math.min(lastWords.length, 8); overlap >= 2; overlap--) {
+            const suffix = lastWords.slice(-overlap).join(' ')
+            if (text.startsWith(suffix)) {
+              text = text.slice(suffix.length).trim()
+              break
+            }
+          }
+          if (!text) return // Entire text was overlap
+        }
         lastFinalTextRef.current = text
         fullTranscriptRef.current.push(text)
         onTranscript?.(text, true)
@@ -179,19 +194,27 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
     recognition.maxAlternatives = 1
 
     recognition.onresult = (event) => {
-      let interim = ''
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript
-        if (event.results[i].isFinal) {
+      // Start from the greater of event.resultIndex or our last processed index
+      // to avoid re-processing already-finalized results on browsers that reset resultIndex
+      const startIdx = Math.max(event.resultIndex, lastProcessedIndexRef.current)
+      let currentInterim = ''
+
+      for (let i = startIdx; i < event.results.length; i++) {
+        const result = event.results[i]
+        const transcript = result[0].transcript.trim()
+        if (!transcript) continue
+
+        if (result.isFinal) {
+          // Advance the processed index past this finalized result
+          lastProcessedIndexRef.current = i + 1
+
           // Check for voice commands before forwarding
           const command = detectCommand(transcript)
           if (command) {
             setLastCommand(command)
-            // Clear command indicator after 2s
             if (commandTimeoutRef.current) clearTimeout(commandTimeoutRef.current)
             commandTimeoutRef.current = setTimeout(() => setLastCommand(null), 2000)
             onCommand?.(command)
-            // Don't send command text as transcript
             continue
           }
           // Deduplicate: skip if identical to last final text
@@ -200,11 +223,12 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
           fullTranscriptRef.current.push(transcript)
           onTranscript?.(transcript, true)
         } else {
-          interim += transcript
+          // Only capture the current interim (the one being spoken right now)
+          currentInterim = transcript
         }
       }
-      if (interim) {
-        onTranscript?.(interim, false)
+      if (currentInterim) {
+        onTranscript?.(currentInterim, false)
       }
     }
 
@@ -219,6 +243,8 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
     // Auto-restart on end (browser stops after silence)
     recognition.onend = () => {
       if (isRecordingRef.current && recognitionRef.current) {
+        // Reset processed index — new recognition session starts fresh results
+        lastProcessedIndexRef.current = 0
         try {
           recognitionRef.current.start()
         } catch (e) {
@@ -234,6 +260,7 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
     setElapsed(0)
     fullTranscriptRef.current = []
     lastFinalTextRef.current = ''
+    lastProcessedIndexRef.current = 0
 
     timerRef.current = setInterval(() => {
       setElapsed((prev) => prev + 1)
