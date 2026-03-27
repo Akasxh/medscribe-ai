@@ -120,8 +120,10 @@ class Session(BaseModel):
     status: SessionStatus = SessionStatus.ACTIVE
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     transcript: str = ""
-    clinical_note: Optional[ClinicalNote] = None
-    fhir_bundle: Optional[dict] = None
+    # SHA-256 hashes of normalised transcript segments already appended.
+    # Used to deduplicate re-sent finals caused by Web Speech API restarts or
+    # WebSocket reconnects.  Not persisted to disk; cleared only on new session.
+    seen_transcript_hashes: set[str] = Field(default_factory=set, exclude=True)
 
 
 class TranscriptMessage(BaseModel):

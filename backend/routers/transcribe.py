@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import html
 import json
 import logging
@@ -33,6 +34,18 @@ VALID_SPECIALTIES = {
 
 # Minimum transcript length worth sending to Gemini at all
 MIN_PROCESSABLE_LENGTH = 20
+
+
+def _segment_hash(text: str) -> str:
+    """Return a stable hash for a normalised transcript segment.
+
+    Normalisation: collapse runs of whitespace, lowercase, strip leading/
+    trailing whitespace.  This makes the dedup robust against minor
+    punctuation-level differences that the Web Speech API sometimes introduces
+    across restarts for the same spoken words.
+    """
+    normalised = " ".join(text.lower().split())
+    return hashlib.sha256(normalised.encode()).hexdigest()
 
 
 def _cleanup_sessions() -> None:
@@ -117,6 +130,28 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                     if len(session.transcript) > 100_000:
                         await _send_error(websocket, "Transcript limit reached (100KB)")
                         continue
+
+                    seg_hash = _segment_hash(text)
+                    if seg_hash in session.seen_transcript_hashes:
+                        # Duplicate segment — frontend re-sent due to WS reconnect
+                        # or Web Speech API restart.  Acknowledge with current
+                        # length so the frontend stays in sync; do not append.
+                        logger.debug(
+                            "Session %s: duplicate transcript segment ignored (hash=%s)",
+                            session_id,
+                            seg_hash[:12],
+                        )
+                        await websocket.send_json(
+                            {
+                                "type": "transcript_ack",
+                                "text": text,
+                                "total_length": len(session.transcript.strip()),
+                                "duplicate": True,
+                            }
+                        )
+                        continue
+
+                    session.seen_transcript_hashes.add(seg_hash)
                     session.transcript += " " + text
 
                     # Send acknowledgment (no auto-processing — extraction

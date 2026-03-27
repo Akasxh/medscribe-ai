@@ -122,6 +122,13 @@ export default function useWebSocket(sessionId) {
   }, [])
 
   const sendTranscript = useCallback((text, isFinal) => {
+    // Optimistically clear interim text the moment a final transcript is
+    // committed locally, rather than waiting for the backend transcript_ack.
+    // This eliminates the visual duplication window where the same text
+    // appears both in transcriptLines and in interimText simultaneously.
+    if (isFinal) {
+      setInterimText('')
+    }
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'transcript',
