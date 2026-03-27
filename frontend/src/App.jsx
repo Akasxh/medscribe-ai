@@ -1,23 +1,16 @@
-import { useState, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo, lazy, Suspense } from 'react'
 import HealthBanner from './components/HealthBanner'
 import Header from './components/Header'
 import RecordButton from './components/RecordButton'
 import LiveTranscript from './components/LiveTranscript'
 import ClinicalNote from './components/ClinicalNote'
-import FHIRViewer from './components/FHIRViewer'
 import FHIRQualityBadge from './components/FHIRQualityBadge'
-import CDSAlerts from './components/CDSAlerts'
-import ExportPanel from './components/ExportPanel'
 import MetricsBar from './components/MetricsBar'
-import ConsultationSummary from './components/ConsultationSummary'
 import InstallPrompt from './components/InstallPrompt'
-import DemoMode from './components/DemoMode'
 import ConsultationPhase from './components/ConsultationPhase'
 import SpecialtySelector from './components/SpecialtySelector'
 import SafetyScoreCard from './components/SafetyScoreCard'
 import useSafetyScore from './hooks/useSafetyScore'
-import ClinicalNudges from './components/ClinicalNudges'
-import PrescriptionQR from './components/PrescriptionQR'
 import ConsentBanner from './components/ConsentBanner'
 import ABHABadge from './components/ABHABadge'
 import UserRegistration from './components/UserRegistration'
@@ -28,6 +21,23 @@ import LanguageSelector from './components/LanguageSelector'
 import ToastContainer from './components/ToastNotification'
 import LandingHero from './components/LandingHero'
 import { FileJson, ClipboardList, Shield, RotateCcw } from 'lucide-react'
+
+// Lazy-loaded components (not needed on initial render)
+const FHIRViewer = lazy(() => import('./components/FHIRViewer'))
+const CDSAlerts = lazy(() => import('./components/CDSAlerts'))
+const ConsultationSummary = lazy(() => import('./components/ConsultationSummary'))
+const PrescriptionQR = lazy(() => import('./components/PrescriptionQR'))
+const DemoMode = lazy(() => import('./components/DemoMode'))
+const ExportPanel = lazy(() => import('./components/ExportPanel'))
+const ClinicalNudges = lazy(() => import('./components/ClinicalNudges'))
+
+function LazyFallback() {
+  return (
+    <div className="card p-6 flex items-center justify-center">
+      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
 
 const SESSION_STORAGE_KEY = 'medscribe_session_id'
 
@@ -302,7 +312,9 @@ export default function App() {
                   isRecording={recorder.isRecording}
                 />
                 {ws.clinicalNote && (
-                  <ClinicalNudges clinicalNote={ws.clinicalNote} />
+                  <Suspense fallback={<LazyFallback />}>
+                    <ClinicalNudges clinicalNote={ws.clinicalNote} />
+                  </Suspense>
                 )}
               </div>
 
@@ -368,7 +380,7 @@ export default function App() {
                 </div>
 
                 {/* Note tab */}
-                <div id="panel-note" role="tabpanel" aria-labelledby="tab-note" className={`${activeTab === 'note' ? '' : 'hidden'} lg:block`}>
+                <div id="panel-note" role="tabpanel" aria-labelledby="tab-note" className={`${activeTab === 'note' ? 'animate-fadeIn' : 'hidden'} lg:block`}>
                   <ClinicalNote
                     data={ws.clinicalNote}
                     processing={ws.processing}
@@ -378,16 +390,18 @@ export default function App() {
                 </div>
 
                 {/* FHIR tab */}
-                <div id="panel-fhir" role="tabpanel" aria-labelledby="tab-fhir" className={`${activeTab === 'fhir' ? '' : 'hidden'} lg:block`}>
+                <div id="panel-fhir" role="tabpanel" aria-labelledby="tab-fhir" className={`${activeTab === 'fhir' ? 'animate-fadeIn' : 'hidden'} lg:block`}>
                   {ws.fhirBundle ? (
                     <>
                       <FHIRQualityBadge quality={ws.fhirQuality} />
                       <div className="mt-2">
-                        <FHIRViewer bundle={ws.fhirBundle} />
+                        <Suspense fallback={<LazyFallback />}>
+                          <FHIRViewer bundle={ws.fhirBundle} />
+                        </Suspense>
                       </div>
                     </>
                   ) : (
-                    <div className="card p-6 text-center">
+                    <div className="card p-6 text-center border-dashed border-2 border-slate-200 dark:border-slate-700">
                       <FileJson className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
                       <p className="text-sm text-slate-400 dark:text-slate-500">
                         {ws.processing ? 'Generating FHIR resources...' : 'FHIR R4 bundle will appear here'}
@@ -397,14 +411,16 @@ export default function App() {
                 </div>
 
                 {/* Safety tab — SafetyScoreCard inside, then CDSAlerts */}
-                <div id="panel-cds" role="tabpanel" aria-labelledby="tab-cds" className={`${activeTab === 'cds' ? '' : 'hidden'} lg:block`}>
+                <div id="panel-cds" role="tabpanel" aria-labelledby="tab-cds" className={`${activeTab === 'cds' ? 'animate-fadeIn' : 'hidden'} lg:block`}>
                   <SafetyScoreCard {...safetyScore} />
                   {ws.cdsAlerts.length > 0 ? (
                     <div className="mt-2">
-                      <CDSAlerts alerts={ws.cdsAlerts} />
+                      <Suspense fallback={<LazyFallback />}>
+                        <CDSAlerts alerts={ws.cdsAlerts} />
+                      </Suspense>
                     </div>
                   ) : (
-                    <div className="card p-6 text-center mt-2">
+                    <div className="card p-6 text-center mt-2 border-dashed border-2 border-slate-200 dark:border-slate-700">
                       <Shield className="w-8 h-8 text-emerald-300 dark:text-emerald-600 mx-auto mb-2" />
                       <p className="text-sm text-slate-400 dark:text-slate-500">
                         {ws.processing ? 'Running safety checks...' : 'No safety alerts — checks appear here'}
@@ -417,32 +433,38 @@ export default function App() {
 
             {/* Export + QR — side by side */}
             {ws.clinicalNote && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <ExportPanel clinicalNote={ws.clinicalNote} fhirBundle={ws.fhirBundle} />
-                <PrescriptionQR
-                  medications={ws.clinicalNote?.medications || []}
-                  patientInfo={ws.clinicalNote?.patient_info || {}}
-                  sessionId={sessionId}
-                  doctorName={user?.name}
-                />
-              </div>
+              <Suspense fallback={<LazyFallback />}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <ExportPanel clinicalNote={ws.clinicalNote} fhirBundle={ws.fhirBundle} />
+                  <PrescriptionQR
+                    medications={ws.clinicalNote?.medications || []}
+                    patientInfo={ws.clinicalNote?.patient_info || {}}
+                    sessionId={sessionId}
+                    doctorName={user?.name}
+                  />
+                </div>
+              </Suspense>
             )}
 
             {/* Consultation Summary */}
-            <ConsultationSummary
-              clinicalNote={ws.clinicalNote}
-              fhirQuality={ws.fhirQuality}
-              cdsAlerts={ws.cdsAlerts}
-              elapsed={recorder.elapsed}
-            />
+            <Suspense fallback={<LazyFallback />}>
+              <ConsultationSummary
+                clinicalNote={ws.clinicalNote}
+                fhirQuality={ws.fhirQuality}
+                cdsAlerts={ws.cdsAlerts}
+                elapsed={recorder.elapsed}
+              />
+            </Suspense>
           </>
         )}
 
         {/* Demo mode — single instance across hero and active views */}
-        <DemoMode
-          onTranscript={handleDemoTranscript}
-          isRecording={recorder.isRecording}
-        />
+        <Suspense fallback={<LazyFallback />}>
+          <DemoMode
+            onTranscript={handleDemoTranscript}
+            isRecording={recorder.isRecording}
+          />
+        </Suspense>
 
         </ErrorBoundary>
       </main>

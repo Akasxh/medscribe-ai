@@ -57,7 +57,14 @@ export default function useWebSocket(sessionId) {
             break
           }
           case 'processing':
-            setProcessing(msg.status === 'started')
+            if (msg.status === 'started') {
+              setProcessing(true)
+            } else {
+              setProcessing(false)
+              if (msg.status === 'completed') {
+                showToast('Clinical note generated successfully', 'success')
+              }
+            }
             break
           case 'interim_transcript':
             setInterimText(msg.text)

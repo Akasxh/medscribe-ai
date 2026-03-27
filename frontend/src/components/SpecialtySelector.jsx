@@ -28,6 +28,7 @@ export default function SpecialtySelector({ value = "general", onChange, classNa
               inline-flex items-center justify-center gap-1.5 px-4 py-2.5 min-h-[48px] rounded-full
               text-sm sm:text-xs font-medium
               whitespace-nowrap transition-all duration-150 flex-shrink-0 cursor-pointer
+              hover:scale-105 active:scale-95 transition-transform
               ${isActive
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500 active:bg-slate-100 dark:active:bg-slate-700'

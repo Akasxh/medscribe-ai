@@ -74,6 +74,7 @@
 /* ─── PWA: Prevent pull-to-refresh on mobile ─── */
 html {
   overscroll-behavior: none;
+  scroll-behavior: smooth;
 }
 
 /* ─── Body Background with Dot Pattern ─── */
@@ -101,6 +102,7 @@ body {
 *:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* ─── Default Transition ─── */
@@ -240,20 +242,23 @@ body {
 
 /* ─── Recording pulse ─── */
 @keyframes recording-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
-  50% { box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 0; }
 }
 .recording-pulse {
   animation: recording-pulse 1.5s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 /* ─── Waveform bars ─── */
 @keyframes waveform {
-  0%, 100% { height: 8px; }
-  50% { height: 24px; }
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
 }
 .waveform-bar {
   animation: waveform 0.8s ease-in-out infinite;
+  transform-origin: bottom;
+  will-change: transform;
 }
 
 /* ─── FHIR JSON code styling ─── */
@@ -263,26 +268,6 @@ body {
   line-height: 1.6;
 }
 
-/* ─── Page transition ─── */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.page-transition {
-  animation: fade-in 0.25s ease-out;
-}
-
-/* ─── Glass card (legacy compat) ─── */
-.glass-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-.dark .glass-card {
-  background: rgba(30, 41, 59, 0.8);
-  border: 1px solid rgba(71, 85, 105, 0.3);
-}
 
 /* ─── Slide-up ─── */
 @keyframes slide-up {
@@ -321,16 +306,6 @@ body {
   animation: pulse-ring 2s ease-in-out infinite;
 }
 
-/* ─── Stagger children ─── */
-.stagger-item:nth-child(1) { animation-delay: 0ms; }
-.stagger-item:nth-child(2) { animation-delay: 60ms; }
-.stagger-item:nth-child(3) { animation-delay: 120ms; }
-.stagger-item:nth-child(4) { animation-delay: 180ms; }
-.stagger-item:nth-child(5) { animation-delay: 240ms; }
-.stagger-item:nth-child(6) { animation-delay: 300ms; }
-.stagger-item:nth-child(7) { animation-delay: 360ms; }
-.stagger-item:nth-child(8) { animation-delay: 420ms; }
-
 /* ─── Fade-in for transcript words ─── */
 @keyframes fade-in-word {
   from { opacity: 0; }
@@ -350,6 +325,15 @@ body {
   background-size: 400% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
   border-radius: 6px;
+}
+
+/* ─── Tab fade-in ─── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
 }
 
 /* ─── Toast slide-in from right ─── */
@@ -429,6 +413,22 @@ body {
   .card {
     border-radius: 10px;
     padding: 12px;
+  }
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Better tap highlight on mobile ─── */
+@media (hover: none) {
+  button, [role="button"], a {
+    -webkit-tap-highlight-color: rgba(37, 99, 235, 0.1);
   }
 }
 

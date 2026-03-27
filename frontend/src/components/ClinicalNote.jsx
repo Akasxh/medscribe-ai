@@ -223,7 +223,32 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
   }, [])
 
   if (!data) {
-    if (processing) return <SkeletonLoader />
+    if (processing) return (
+      <div className="card p-4 space-y-4 animate-pulse">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <div>
+            <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded" />
+            <div className="h-3 w-48 bg-slate-100 dark:bg-slate-800 rounded mt-1" />
+          </div>
+        </div>
+        <div className="space-y-2.5">
+          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-full" />
+          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-5/6" />
+          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-4/6" />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="h-16 bg-slate-100 dark:bg-slate-800 rounded-lg" />
+          <div className="h-16 bg-slate-100 dark:bg-slate-800 rounded-lg" />
+          <div className="h-16 bg-slate-100 dark:bg-slate-800 rounded-lg" />
+        </div>
+        <p className="text-xs text-center text-blue-600 dark:text-blue-400 font-medium">
+          AI is extracting clinical data...
+        </p>
+      </div>
+    )
     return (
       <div className="bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
         <div className="flex flex-col items-center justify-center py-10 text-slate-400 dark:text-slate-500">

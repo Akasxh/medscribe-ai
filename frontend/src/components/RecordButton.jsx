@@ -73,10 +73,10 @@ export default function RecordButton({ isRecording, elapsed, supported, processi
         onClick={isRecording ? onStop : onStart}
         aria-label={isRecording ? 'Stop recording' : 'Start recording'}
         className={`
-          relative w-[80px] h-[80px] sm:w-[72px] sm:h-[72px] rounded-full flex items-center justify-center transition-all duration-300
+          relative w-[80px] h-[80px] sm:w-[72px] sm:h-[72px] rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 transition-transform
           ${isRecording
-            ? 'bg-red-500 text-white shadow-lg shadow-red-500/25 hover:bg-red-600 active:scale-95'
-            : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-lg shadow-blue-600/30'
+            ? 'bg-red-500 text-white shadow-lg shadow-red-500/25 hover:bg-red-600 hover:scale-105'
+            : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 shadow-lg shadow-blue-600/30'
           }
           cursor-pointer
         `}

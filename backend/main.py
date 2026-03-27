@@ -22,8 +22,6 @@ from starlette.requests import Request
 
 from routers.transcribe import router as transcribe_router
 from routers.sessions import router as sessions_router
-from services.encryption_service import get_encryption_status
-from services.stt_service import get_stt_status
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -31,12 +29,34 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
+        # Security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "microphone=(self), camera=()"
-        # In production: add Strict-Transport-Security for HTTPS
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: blob:; "
+            "connect-src 'self' ws: wss:; "
+            "object-src 'none'; "
+            "base-uri 'self'"
+        )
+
+        # HSTS for production (Railway is always HTTPS)
+        if request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+        # Cache headers for static assets
+        path = request.url.path
+        if path.startswith("/assets/") or path.startswith("/icons/"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif path.endswith(".html") or path == "/":
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+
         return response
 
 app = FastAPI(
@@ -79,14 +99,15 @@ async def startup_health_check():
 
 @app.get("/api/health")
 async def health_check():
-    gemini_configured = bool(os.getenv("GEMINI_API_KEY", ""))
     return {
         "status": "healthy",
-        "service": "MedScribe AI Backend",
+        "service": "MedScribe AI",
         "version": "1.0.0",
-        "gemini_configured": gemini_configured,
-        "security": get_encryption_status(),
-        "stt": get_stt_status(),
+        "features": {
+            "gemini": bool(os.getenv("GEMINI_API_KEY", "")),
+            "stt": bool(os.getenv("SARVAM_API_KEY", "")),
+            "encryption": True,
+        },
     }
 
 

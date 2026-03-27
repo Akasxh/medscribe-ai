@@ -426,12 +426,23 @@ async def _process_and_send(
             except Exception as e2:
                 logger.error("Fallback ClinicalNote creation also failed: %s", e2)
 
-        # Run Clinical Decision Support checks (needed for DetectedIssue FHIR resources)
+        # Run CDS checks and terminology validation concurrently (both
+        # operate on clinical_data independently).  CDS results feed into
+        # the FHIR bundle build, so we await both before building.
         try:
-            cds_alerts = check_clinical_alerts(clinical_data)
+            cds_alerts, terminology = await asyncio.gather(
+                asyncio.to_thread(check_clinical_alerts, clinical_data),
+                asyncio.to_thread(validate_clinical_data, clinical_data),
+            )
         except Exception as e:
-            logger.error("CDS check failed: %s", e, exc_info=True)
+            logger.error("CDS/terminology concurrent check failed: %s", e, exc_info=True)
             cds_alerts = []
+            terminology = {
+                "score_boost": 0,
+                "valid_count": 0,
+                "total_count": 0,
+                "validation_ratio": 0,
+            }
 
         # Build FHIR bundle (includes DetectedIssue from CDS alerts)
         try:
@@ -452,18 +463,6 @@ async def _process_and_send(
                 "data": clinical_data,
             }
         )
-
-        # Terminology validation
-        try:
-            terminology = validate_clinical_data(clinical_data)
-        except Exception as e:
-            logger.error("Terminology validation failed: %s", e, exc_info=True)
-            terminology = {
-                "score_boost": 0,
-                "valid_count": 0,
-                "total_count": 0,
-                "validation_ratio": 0,
-            }
 
         # Send FHIR bundle with quality score + terminology validation
         fhir_quality = _calculate_fhir_quality(fhir_bundle, clinical_data)
