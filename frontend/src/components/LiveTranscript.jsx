@@ -57,11 +57,17 @@ export default function LiveTranscript({ transcript, interimText, isRecording })
         ) : (
           <p className="text-[15px] leading-relaxed text-slate-700 dark:text-slate-300">
             {transcript.join(' ')}
-            {interimText && (
-              <span className="text-slate-400 dark:text-slate-500 italic ml-1">
-                {interimText}
-              </span>
-            )}
+            {interimText && (() => {
+              // Don't show interim if it duplicates the last finalized line (prevents visual flash)
+              const lastLine = (transcript[transcript.length - 1] || '').trim().toLowerCase()
+              const interim = interimText.trim().toLowerCase()
+              if (interim === lastLine || lastLine.endsWith(interim)) return null
+              return (
+                <span className="text-slate-400 dark:text-slate-500 italic ml-1">
+                  {interimText}
+                </span>
+              )
+            })()}
             {isRecording && !interimText && transcript.length > 0 && (
               <span className="inline-flex items-center gap-0.5 ml-1.5 align-middle">
                 <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-500 animate-bounce" style={{ animationDelay: '0ms' }} />

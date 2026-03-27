@@ -75,8 +75,8 @@ export default function App() {
   const [useSarvam, setUseSarvam] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
   const hasStartedRef = useRef(false)
-  const lastTranscriptRef = useRef('')
-  const lastDemoTranscriptRef = useRef('')
+  // Set-based dedup for all final transcripts (live + demo) — catches non-consecutive duplicates
+  const seenFinalsRef = useRef(new Set())
 
   const handleRegister = useCallback((newUser) => {
     setUser(newUser)
@@ -101,8 +101,7 @@ export default function App() {
     setPatientName('')
     hasStartedRef.current = false
     setSessionActive(false)
-    lastTranscriptRef.current = ''
-    lastDemoTranscriptRef.current = ''
+    seenFinalsRef.current = new Set()
   }, [ws])
 
   // Safety score hook
@@ -110,9 +109,9 @@ export default function App() {
 
   const handleTranscript = useCallback((text, isFinal) => {
     if (isFinal) {
-      // Deduplicate: skip if identical to the last final transcript
-      if (text === lastTranscriptRef.current) return
-      lastTranscriptRef.current = text
+      const key = text.trim().toLowerCase()
+      if (!key || seenFinalsRef.current.has(key)) return
+      seenFinalsRef.current.add(key)
       setTranscriptLines(prev => [...prev, text])
     }
     ws.sendTranscript(text, isFinal)
@@ -171,9 +170,9 @@ export default function App() {
     }
     setTimeout(() => {
       if (isFinal) {
-        // Deduplicate: skip if identical to the last final demo transcript
-        if (text === lastDemoTranscriptRef.current) return
-        lastDemoTranscriptRef.current = text
+        const key = text.trim().toLowerCase()
+        if (!key || seenFinalsRef.current.has(key)) return
+        seenFinalsRef.current.add(key)
         setTranscriptLines(prev => [...prev, text])
       }
       ws.sendTranscript(text, isFinal)
