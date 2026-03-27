@@ -151,6 +151,8 @@ export default function App() {
       document.getElementById('consent-section')?.scrollIntoView({ behavior: 'smooth' })
       return
     }
+    // Guard against double-tap: if already recording, don't start a second instance
+    if (recorder.isRecording) return
     ws.connect()
     hasStartedRef.current = true
     recorder.startRecording()
