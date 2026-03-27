@@ -89,6 +89,7 @@ export default function App() {
     setSpecialty('general')
     setPatientName('')
     hasStartedRef.current = false
+    setSessionActive(false)
     lastTranscriptRef.current = ''
     lastDemoTranscriptRef.current = ''
   }, [ws])
@@ -129,18 +130,21 @@ export default function App() {
     ws.sendSpecialty(value)
   }, [ws])
 
+  // Transition from hero to active session view
+  const [sessionActive, setSessionActive] = useState(false)
+  const handleHeroStart = useCallback(() => {
+    hasStartedRef.current = true
+    setSessionActive(true)  // forces re-render to show active view
+  }, [])
+
   const handleStart = useCallback(() => {
     if (!consented) {
       document.getElementById('consent-section')?.scrollIntoView({ behavior: 'smooth' })
       return
     }
-    if (!hasStartedRef.current) {
-      ws.connect()
-      hasStartedRef.current = true
-      setTimeout(() => recorder.startRecording(), 300)
-    } else {
-      recorder.startRecording()
-    }
+    ws.connect()
+    hasStartedRef.current = true
+    recorder.startRecording()
   }, [ws, recorder, consented])
 
   const handleStop = useCallback(() => {
@@ -171,7 +175,7 @@ export default function App() {
   const wordCount = useMemo(() => transcriptLines.join(' ').split(/\s+/).filter(Boolean).length, [transcriptLines])
   const resourceCount = ws.fhirBundle?.entry?.length || 0
 
-  const hasSession = hasStartedRef.current || transcriptLines.length > 0 || ws.clinicalNote
+  const hasSession = sessionActive || hasStartedRef.current || transcriptLines.length > 0 || ws.clinicalNote
   const showHero = !hasSession
 
   // Show registration screen if no user is logged in
@@ -193,7 +197,7 @@ export default function App() {
         {showHero ? (
           <>
             {/* Landing state: hero + compact demo */}
-            <LandingHero onStart={handleStart} supported={recorder.supported} />
+            <LandingHero onStart={handleHeroStart} supported={recorder.supported} />
           </>
         ) : (
           <>
