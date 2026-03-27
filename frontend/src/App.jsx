@@ -73,6 +73,7 @@ export default function App() {
   const [patientName, setPatientName] = useState('')
   const [speechLang, setSpeechLang] = useState('hi-IN')
   const [useSarvam, setUseSarvam] = useState(false)
+  const [sessionActive, setSessionActive] = useState(false)
   const hasStartedRef = useRef(false)
   const lastTranscriptRef = useRef('')
   const lastDemoTranscriptRef = useRef('')
@@ -141,7 +142,6 @@ export default function App() {
   }, [ws])
 
   // Transition from hero to active session view
-  const [sessionActive, setSessionActive] = useState(false)
   const handleHeroStart = useCallback(() => {
     hasStartedRef.current = true
     setSessionActive(true)  // forces re-render to show active view
