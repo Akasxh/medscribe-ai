@@ -7,3 +7,5 @@ python-dotenv==1.0.1
 pydantic==2.10.3
 python-multipart==0.0.18
 cryptography==44.0.0
+pytest==8.3.4
+pytest-asyncio==0.24.0

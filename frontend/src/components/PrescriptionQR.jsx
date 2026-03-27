@@ -2,8 +2,6 @@ import { useState, useCallback } from 'react'
 import { QrCode, Download, X, ExternalLink } from 'lucide-react'
 import QRCode from 'qrcode'
 
-const RX_BASE_URL = `${window.location.origin}/rx`
-
 export default function PrescriptionQR({ medications = [], patientInfo = {}, sessionId, doctorName }) {
   const [qrDataUrl, setQrDataUrl] = useState(null)
   const [generating, setGenerating] = useState(false)
@@ -20,6 +18,7 @@ export default function PrescriptionQR({ medications = [], patientInfo = {}, ses
     setError(null)
 
     try {
+      const RX_BASE_URL = `${window.location.origin}/rx`
       const rxUrl = `${RX_BASE_URL}/${sessionId || 'unknown'}`
 
       const fallbackPayload = {
@@ -164,7 +163,7 @@ export default function PrescriptionQR({ medications = [], patientInfo = {}, ses
 
               {/* Link preview */}
               <a
-                href={`${RX_BASE_URL}/${sessionId || 'unknown'}`}
+                href={`${window.location.origin}/rx/${sessionId || 'unknown'}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline"

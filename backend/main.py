@@ -1,4 +1,5 @@
 import os
+import pathlib
 import sys
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 
 from routers.transcribe import router as transcribe_router
@@ -46,11 +48,14 @@ app = FastAPI(
 # Security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
 
+# GZip compression for responses >= 1KB
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 # CORS — allow all origins for hackathon demo
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -96,9 +101,9 @@ if os.path.exists(_static_dir):
     async def serve_spa(full_path: str) -> FileResponse:
         """SPA fallback: serve index.html for all non-API/WS routes."""
         if full_path.startswith(("api/", "ws/", "rx/")):
-            # Let FastAPI handle API/WS/Rx routes normally
             raise HTTPException(status_code=404, detail="Not found")
-        file_path = os.path.join(_static_dir, full_path)
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            return FileResponse(file_path)
+        safe_root = pathlib.Path(_static_dir).resolve()
+        requested = (safe_root / full_path).resolve()
+        if str(requested).startswith(str(safe_root)) and requested.is_file():
+            return FileResponse(str(requested))
         return FileResponse(os.path.join(_static_dir, "index.html"))

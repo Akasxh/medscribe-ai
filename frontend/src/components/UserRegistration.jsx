@@ -5,6 +5,7 @@ export default function UserRegistration({ onRegister }) {
   const [name, setName] = useState('')
   const [doctorId, setDoctorId] = useState('')
   const [hospital, setHospital] = useState('')
+  const [patientName, setPatientName] = useState('')
   const [error, setError] = useState('')
 
   const handleSubmit = (e) => {
@@ -19,6 +20,7 @@ export default function UserRegistration({ onRegister }) {
       name: trimmed,
       doctorId: doctorId.trim() || null,
       hospital: hospital.trim() || null,
+      patientName: patientName.trim() || null,
       registeredAt: new Date().toISOString(),
     }
 
@@ -107,6 +109,25 @@ export default function UserRegistration({ onRegister }) {
               </div>
             </div>
 
+            {/* Patient Name (optional - for this consultation) */}
+            <div>
+              <label htmlFor="reg-patient" className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+                Patient Name
+                <span className="text-slate-400 font-normal ml-1">(for this consultation)</span>
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  id="reg-patient"
+                  type="text"
+                  value={patientName}
+                  onChange={(e) => setPatientName(e.target.value)}
+                  placeholder="Patient's name (optional)"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                />
+              </div>
+            </div>
+
             {/* Error */}
             {error && (
               <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
@@ -117,7 +138,7 @@ export default function UserRegistration({ onRegister }) {
               type="submit"
               className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm rounded-xl shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800"
             >
-              Start
+              Begin Consultation
             </button>
           </form>
 

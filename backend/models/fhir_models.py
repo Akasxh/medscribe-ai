@@ -9,7 +9,7 @@ These constants define the standard profile URLs and coding systems used.
 FHIR_R4_BASE = "http://hl7.org/fhir/StructureDefinition"
 
 # Coding systems
-ICD10_SYSTEM = "http://hl7.org/fhir/sid/icd-10"
+ICD10_SYSTEM = "http://hl7.org/fhir/sid/icd-10-cm"
 SNOMED_SYSTEM = "http://snomed.info/sct"
 RXNORM_SYSTEM = "http://www.nlm.nih.gov/research/umls/rxnorm"
 LOINC_SYSTEM = "http://loinc.org"
@@ -25,4 +25,5 @@ PROFILES = {
     "CarePlan": f"{FHIR_R4_BASE}/CarePlan",
     "ServiceRequest": f"{FHIR_R4_BASE}/ServiceRequest",
     "DetectedIssue": f"{FHIR_R4_BASE}/DetectedIssue",
+    "Composition": f"{FHIR_R4_BASE}/Composition",
 }

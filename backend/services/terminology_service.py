@@ -16,13 +16,18 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 # Load reference data once at module level
 _icd10_codes: dict = {}
 _drug_reference: dict = {}
+_drug_brands_lower: dict[str, str] = {}
+_drug_generics_lower: dict[str, str] = {}
+_loaded = False
 
 
-def _load_references():
-    global _icd10_codes, _drug_reference
+def _load_references() -> None:
+    global _loaded, _icd10_codes, _drug_reference, _drug_brands_lower, _drug_generics_lower
+    if _loaded:
+        return
 
     icd10_path = DATA_DIR / "icd10_common.json"
-    if icd10_path.exists() and not _icd10_codes:
+    if icd10_path.exists():
         with open(icd10_path) as f:
             raw = json.load(f)
             # Create reverse lookup: code -> condition name
@@ -31,9 +36,15 @@ def _load_references():
             _icd10_codes.update({k.lower(): v for k, v in raw.items()})
 
     drug_path = DATA_DIR / "drug_reference.json"
-    if drug_path.exists() and not _drug_reference:
+    if drug_path.exists():
         with open(drug_path) as f:
             _drug_reference = json.load(f)  # {"BrandName": {"generic": "...", "category": "..."}}
+
+    # Pre-build lowercase lookup sets to avoid O(n) scans per medication
+    _drug_brands_lower = {k.lower(): k for k in _drug_reference}
+    _drug_generics_lower = {v["generic"].lower(): k for k, v in _drug_reference.items() if v.get("generic")}
+
+    _loaded = True
 
 
 def validate_clinical_data(clinical_data: dict) -> dict:
@@ -101,10 +112,7 @@ def validate_clinical_data(clinical_data: dict) -> dict:
             })
             valid_count += 1
 
-    # Validate drug names against reference
-    # _drug_reference is {"BrandName": {"generic": "...", "category": "..."}}
-    drug_brands_lower = {k.lower(): k for k in _drug_reference}
-    drug_generics_lower = {v["generic"].lower(): k for k, v in _drug_reference.items()}
+    # Validate drug names against reference (using pre-built lowercase lookups)
 
     for i, med in enumerate(clinical_data.get("medications", [])):
         name = (med.get("name") or "").lower()
@@ -113,19 +121,19 @@ def validate_clinical_data(clinical_data: dict) -> dict:
 
         matched = False
         # Check if brand name matches
-        if name in drug_brands_lower:
+        if name in _drug_brands_lower:
             matched = True
         # Check if generic matches
-        elif generic in drug_generics_lower:
+        elif generic in _drug_generics_lower:
             matched = True
         # Fuzzy: check if any brand is contained in the name or vice versa
         else:
-            for brand_lower in drug_brands_lower:
+            for brand_lower in _drug_brands_lower:
                 if brand_lower in name or name in brand_lower:
                     matched = True
                     break
             if not matched:
-                for gen_lower in drug_generics_lower:
+                for gen_lower in _drug_generics_lower:
                     if gen_lower in generic or generic in gen_lower:
                         matched = True
                         break

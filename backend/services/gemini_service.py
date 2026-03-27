@@ -102,16 +102,19 @@ class GeminiExtractionService:
     async def _call_gemini(self, user_prompt: str, attempt: int) -> dict | None:
         """Single Gemini API call with parsing. Returns parsed dict or None."""
         t0 = time.monotonic()
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: self.model.generate_content(
-                user_prompt,
-                generation_config=genai.GenerationConfig(
-                    response_mime_type="application/json",
-                    temperature=0.1,
+        loop = asyncio.get_running_loop()
+        response = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: self.model.generate_content(
+                    user_prompt,
+                    generation_config=genai.GenerationConfig(
+                        response_mime_type="application/json",
+                        temperature=0.1,
+                    ),
                 ),
             ),
+            timeout=30.0,
         )
         elapsed = time.monotonic() - t0
 

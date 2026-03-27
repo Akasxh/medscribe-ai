@@ -10,6 +10,7 @@ clinical note.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
@@ -66,7 +67,8 @@ DRUG_INTERACTIONS: list[DrugInteraction] = [
         drug_a=frozenset({"aspirin", "ecosprin", "acetylsalicylic acid"}),
         drug_b=frozenset({"ibuprofen", "combiflam", "diclofenac", "naproxen",
                           "nsaid", "nsaids", "aceclofenac", "piroxicam",
-                          "ketorolac", "nimesulide"}),
+                          "ketorolac", "nimesulide",
+                          "mefenamic acid", "meftal"}),
         severity=AlertSeverity.WARNING,
         title="Aspirin + NSAID: Increased bleeding risk",
         description=(
@@ -220,7 +222,8 @@ DRUG_INTERACTIONS: list[DrugInteraction] = [
         drug_a=frozenset({"warfarin", "acenocoumarol", "acitrom"}),
         drug_b=frozenset({"ibuprofen", "combiflam", "diclofenac", "naproxen",
                           "nsaid", "nsaids", "aceclofenac", "piroxicam",
-                          "ketorolac", "nimesulide"}),
+                          "ketorolac", "nimesulide",
+                          "mefenamic acid", "meftal"}),
         severity=AlertSeverity.CRITICAL,
         title="Warfarin + NSAID: Major bleeding risk",
         description=(
@@ -232,7 +235,8 @@ DRUG_INTERACTIONS: list[DrugInteraction] = [
     ),
     DrugInteraction(
         drug_a=frozenset({"ciprofloxacin", "cipro", "ciplox", "levofloxacin",
-                          "levaquin", "fluoroquinolone"}),
+                          "levaquin", "fluoroquinolone",
+                          "norfloxacin", "norflox"}),
         drug_b=frozenset({"theophylline", "deriphyllin", "aminophylline",
                           "etofylline"}),
         severity=AlertSeverity.WARNING,
@@ -273,6 +277,22 @@ ALLERGY_RULES: list[AllergyRule] = [
             "and Augmentin (Amoxicillin + Clavulanic Acid) share the "
             "beta-lactam ring and carry a high cross-reactivity risk. "
             "Consider a macrolide or fluoroquinolone alternative."
+        ),
+    ),
+    AllergyRule(
+        allergy_keywords=frozenset({"penicillin", "amoxicillin", "ampicillin"}),
+        contraindicated_drugs=frozenset({
+            "cefixime", "zifi", "ceftriaxone", "monocef",
+            "cephalexin", "cefalexin", "taxim", "cefpodoxime", "cefuroxime",
+            "cephalosporin", "cephalosporins",
+        }),
+        severity=AlertSeverity.WARNING,
+        title="Penicillin allergy: Cephalosporin cross-reactivity risk",
+        description=(
+            "The patient has a documented penicillin allergy. Cephalosporins "
+            "share the beta-lactam ring structure and carry approximately 1-10% "
+            "cross-reactivity risk. Use with caution and consider alternatives "
+            "such as macrolides or fluoroquinolones."
         ),
     ),
     AllergyRule(
@@ -374,27 +394,51 @@ def _check_drug_interactions(medications: list[dict]) -> list[dict]:
     if len(medications) < 2:
         return alerts
 
-    # Build per-medication token sets once
-    med_token_sets: list[tuple[dict, set[str]]] = [
-        (med, _medication_tokens(med)) for med in medications
+    # Build per-medication token sets once (indexed for self-match guard)
+    med_token_sets: list[tuple[int, dict, set[str]]] = [
+        (idx, med, _medication_tokens(med))
+        for idx, med in enumerate(medications)
     ]
 
     for interaction in DRUG_INTERACTIONS:
-        involved_a: list[dict] = []
-        involved_b: list[dict] = []
+        involved_a: list[tuple[int, dict]] = []
+        involved_b: list[tuple[int, dict]] = []
 
-        for med, tokens in med_token_sets:
+        for idx, med, tokens in med_token_sets:
             if _matches(tokens, interaction.drug_a):
-                involved_a.append(med)
+                involved_a.append((idx, med))
             if _matches(tokens, interaction.drug_b):
-                involved_b.append(med)
+                involved_b.append((idx, med))
 
         if involved_a and involved_b:
-            # Collect unique medications involved (a med could be in both sets
-            # if the interaction is reflexive — deduplicate by name).
+            # Check that at least one pair involves distinct medications
+            has_real_pair = False
+            for med_a_idx, med_a in involved_a:
+                med_a_name = _normalise(
+                    med_a.get("generic_name") or med_a.get("name") or ""
+                )
+                for med_b_idx, med_b in involved_b:
+                    # Skip self-interactions (same index)
+                    if med_a_idx == med_b_idx:
+                        continue
+                    # Skip self-interactions (same medication name in two slots)
+                    med_b_name = _normalise(
+                        med_b.get("generic_name") or med_b.get("name") or ""
+                    )
+                    if med_a_name and med_b_name and med_a_name == med_b_name:
+                        continue
+                    has_real_pair = True
+                    break
+                if has_real_pair:
+                    break
+
+            if not has_real_pair:
+                continue
+
+            # Collect unique medications involved
             seen_names: set[str] = set()
             meds_involved: list[str] = []
-            for med in involved_a + involved_b:
+            for _, med in involved_a + involved_b:
                 display = _medication_display_name(med)
                 if display not in seen_names:
                     seen_names.add(display)
@@ -456,6 +500,53 @@ def _check_allergy_contraindications(
     return alerts
 
 
+def _parse_dose_mg(dosage_str: str) -> float | None:
+    """Extract dose in mg from various formats. Returns None if unparseable.
+
+    Handles patterns like:
+    - ``"500mg"``, ``"500 mg"``, ``"0.5g"``, ``"250mcg"``
+    - ``"BD 500mg"`` (text prefix before the dose)
+    - ``"2x500mg"`` (multiplier notation → 1000 mg)
+    """
+    if not dosage_str:
+        return None
+    s = dosage_str.lower().strip()
+
+    # Try multiplier pattern first: "2x500mg", "2×500mg", "2*500mg"
+    mult_match = re.search(r'(\d+)\s*[x×*]\s*(\d+\.?\d*)\s*(mg|mcg|g|ml)?\b', s)
+    if mult_match:
+        multiplier = int(mult_match.group(1))
+        base_value = float(mult_match.group(2))
+        unit = mult_match.group(3) or "mg"
+        value = multiplier * base_value
+        if unit == 'g':
+            value *= 1000
+        elif unit == 'mcg':
+            value /= 1000
+        return value
+
+    # Find ALL number+unit matches so we can pick the best one.
+    # Use the *last* match (most likely the actual dose when preceded by
+    # frequency text like "BD 500mg" or "1 tab 500mg").
+    matches = list(re.finditer(r'(\d+\.?\d*)\s*(mg|mcg|g|ml)\b', s))
+    if matches:
+        match = matches[-1]
+        value = float(match.group(1))
+        unit = match.group(2)
+        if unit == 'g':
+            value *= 1000
+        elif unit == 'mcg':
+            value /= 1000
+        return value
+
+    # Try number-only (assume mg) — pick the largest number
+    num_matches = re.findall(r'(\d+\.?\d*)', s)
+    if num_matches:
+        return max(float(n) for n in num_matches)
+
+    return None
+
+
 def _check_dosage_alerts(medications: list[dict]) -> list[dict]:
     """Basic dosage-range sanity checks for commonly prescribed drugs.
 
@@ -464,7 +555,7 @@ def _check_dosage_alerts(medications: list[dict]) -> list[dict]:
     """
     alerts: list[dict] = []
 
-    # Map of generic name → (max single dose mg, max daily doses, unit label)
+    # Map of generic name → (max single dose mg, unit label)
     MAX_SINGLE_DOSE: dict[str, tuple[float, str]] = {
         "paracetamol": (1000.0, "mg"),
         "ibuprofen": (800.0, "mg"),
@@ -492,20 +583,8 @@ def _check_dosage_alerts(medications: list[dict]) -> list[dict]:
             if drug_name not in generic:
                 continue
 
-            # Extract numeric value from dosage string
-            numeric_part = ""
-            for ch in dosage_str:
-                if ch.isdigit() or ch == ".":
-                    numeric_part += ch
-                elif numeric_part:
-                    break
-
-            if not numeric_part:
-                continue
-
-            try:
-                dose_value = float(numeric_part)
-            except ValueError:
+            dose_value = _parse_dose_mg(dosage_str)
+            if dose_value is None:
                 continue
 
             if dose_value > max_dose:
@@ -539,7 +618,7 @@ def check_clinical_alerts(clinical_data: dict) -> list[dict]:
     Parameters
     ----------
     clinical_data:
-        A dict matching the Gemini/Claude clinical extraction schema.
+        A dict matching the clinical extraction schema.
         Expected keys used by this function:
         - ``medications``: list of dicts with ``name``, ``generic_name``,
           ``dosage``, ``frequency``, ``duration``, ``route``.

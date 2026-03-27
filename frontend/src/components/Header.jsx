@@ -4,16 +4,19 @@ import { InstallButton } from './InstallPrompt'
 
 export default function Header({ user, onLogout }) {
   const [dark, setDark] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark' ||
-        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    try {
+      return localStorage.getItem('medscribe_dark') === 'true' ||
+        (window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false)
+    } catch {
+      return false
     }
-    return false
   })
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('theme', dark ? 'dark' : 'light')
+    try {
+      localStorage.setItem('medscribe_dark', dark ? 'true' : 'false')
+    } catch {}
   }, [dark])
 
   return (

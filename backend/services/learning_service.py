@@ -7,7 +7,7 @@ relevant corrections and inject them as few-shot examples into the prompt.
 
 This is a lightweight "learning" approach that works without model fine-tuning:
 - No model retraining needed
-- Works with any API (Gemini, Claude, etc.)
+- Works with any LLM API
 - Corrections improve accuracy for similar future cases
 - All data stays local (HIPAA-friendly pattern)
 """
@@ -15,6 +15,8 @@ This is a lightweight "learning" approach that works without model fine-tuning:
 import json
 import logging
 import os
+import tempfile
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -27,25 +29,45 @@ CORRECTIONS_FILE = CORRECTIONS_DIR / "corrections.json"
 MAX_CORRECTIONS = 50  # Keep most recent corrections to avoid prompt bloat
 MAX_FEW_SHOT_EXAMPLES = 3  # Max examples to include in each prompt
 
+_corrections_lock = threading.Lock()
+_corrections_cache: list[dict] | None = None
+
 
 def _load_corrections() -> list[dict]:
-    """Load stored corrections from disk."""
+    """Load stored corrections from disk (cached after first read)."""
+    global _corrections_cache
+    if _corrections_cache is not None:
+        return _corrections_cache
     if not CORRECTIONS_FILE.exists():
-        return []
+        _corrections_cache = []
+        return _corrections_cache
     try:
         with open(CORRECTIONS_FILE, "r") as f:
-            return json.load(f)
+            _corrections_cache = json.load(f)
     except (json.JSONDecodeError, IOError):
-        return []
+        _corrections_cache = []
+    return _corrections_cache
 
 
 def _save_corrections(corrections: list[dict]) -> None:
-    """Save corrections to disk."""
+    """Save corrections to disk atomically and update cache."""
+    global _corrections_cache
     CORRECTIONS_DIR.mkdir(parents=True, exist_ok=True)
-    # Keep only the most recent corrections
     corrections = corrections[-MAX_CORRECTIONS:]
-    with open(CORRECTIONS_FILE, "w") as f:
-        json.dump(corrections, f, indent=2, default=str)
+    # Write to temp file then atomically replace
+    fd, tmp_path = tempfile.mkstemp(dir=str(CORRECTIONS_DIR), suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w') as f:
+            json.dump(corrections, f, indent=2, default=str)
+        os.replace(tmp_path, str(CORRECTIONS_FILE))
+        _corrections_cache = corrections
+    except Exception:
+        # Clean up temp file on failure
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 def store_correction(
@@ -77,9 +99,10 @@ def store_correction(
         "category": _categorize_correction(field_path),
     }
 
-    corrections = _load_corrections()
-    corrections.append(correction)
-    _save_corrections(corrections)
+    with _corrections_lock:
+        corrections = _load_corrections()
+        corrections.append(correction)
+        _save_corrections(corrections)
 
     logger.info(
         f"Stored correction for session {session_id}: {field_path} "

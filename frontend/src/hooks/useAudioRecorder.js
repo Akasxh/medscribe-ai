@@ -75,6 +75,10 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
         method: 'POST',
         body: formData,
       })
+      if (!res.ok) {
+        console.error('Sarvam transcription failed:', res.status, res.statusText)
+        return
+      }
       const data = await res.json()
       if (data.transcript && data.transcript.trim()) {
         let text = data.transcript.trim()
@@ -156,6 +160,10 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
         setElapsed((prev) => prev + 1)
       }, 1000)
     } catch (err) {
+      // Stop media stream tracks to release the microphone
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop())
+      }
       console.error('Failed to start Sarvam recording:', err)
       setSupported(false)
     }
@@ -233,10 +241,18 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
     }
 
     recognition.onerror = (event) => {
-      if (event.error === 'no-speech') return // Ignore no-speech errors
-      console.error('Speech recognition error:', event.error)
-      if (event.error === 'not-allowed') {
+      const error = event.error
+      if (error === 'no-speech' || error === 'aborted') return
+
+      console.error('Speech recognition error:', error)
+
+      if (error === 'not-allowed') {
         setSupported(false)
+      }
+
+      // Stop auto-restart for hard errors to prevent infinite loop
+      if (['network', 'audio-capture', 'service-not-allowed'].includes(error)) {
+        isRecordingRef.current = false
       }
     }
 
@@ -303,6 +319,7 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
 
   useEffect(() => {
     return () => {
+      isRecordingRef.current = false  // Prevent onend from restarting
       if (recognitionRef.current) recognitionRef.current.stop()
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop()

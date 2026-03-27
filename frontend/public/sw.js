@@ -15,9 +15,10 @@ const APP_SHELL = [
 // ─── Install: cache app shell ───
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(STATIC_CACHE)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 // ─── Activate: purge old caches ───

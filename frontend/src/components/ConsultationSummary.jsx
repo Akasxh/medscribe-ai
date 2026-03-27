@@ -11,7 +11,7 @@ export default function ConsultationSummary({ clinicalNote, fhirQuality, cdsAler
 
   const hasCriticalAlerts = cdsAlerts.some(a => a.severity === 'critical')
   const totalAlerts = cdsAlerts.length
-  const timeSavedMultiplier = elapsed > 0 ? Math.max(1, Math.round(600 / elapsed)) : 0
+  const timeSavedMultiplier = elapsed > 0 ? Math.min(20, Math.max(1, Math.round(600 / elapsed))) : 0
 
   const handleShare = async () => {
     const summary = generateTextSummary(clinicalNote, fhirQuality, cdsAlerts, elapsed)

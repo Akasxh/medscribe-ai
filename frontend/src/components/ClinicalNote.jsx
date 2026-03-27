@@ -171,7 +171,7 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
   const [correctionCount, setCorrectionCount] = useState(0)
 
   const startEditing = useCallback(() => {
-    setEditData(JSON.parse(JSON.stringify(data)))
+    setEditData(structuredClone(data))
     setEditing(true)
   }, [data])
 
@@ -212,7 +212,7 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
 
   const updateField = useCallback((path, value) => {
     setEditData(prev => {
-      const next = JSON.parse(JSON.stringify(prev))
+      const next = structuredClone(prev)
       setNestedValue(next, path, value)
       return next
     })

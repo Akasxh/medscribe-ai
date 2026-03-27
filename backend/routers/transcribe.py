@@ -1,7 +1,8 @@
 import asyncio
+import html
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
@@ -21,8 +22,35 @@ router = APIRouter()
 # Imported by sessions.py as well
 sessions_store: dict[str, Session] = {}
 
+SESSION_TTL_HOURS = 24
+MAX_SESSIONS = 100
+
+VALID_SPECIALTIES = {
+    "general", "cardiology", "endocrinology", "pulmonology",
+    "gastroenterology", "orthopedics", "neurology", "pediatrics",
+    "dermatology", "psychiatry",
+}
+
 # Minimum transcript length worth sending to Gemini at all
 MIN_PROCESSABLE_LENGTH = 20
+
+
+def _cleanup_sessions() -> None:
+    """Remove expired sessions to prevent unbounded memory growth."""
+    if len(sessions_store) <= MAX_SESSIONS:
+        return
+    now = datetime.now()
+    expired = [
+        sid for sid, session in sessions_store.items()
+        if (now - session.created_at).total_seconds() > SESSION_TTL_HOURS * 3600
+    ]
+    for sid in expired:
+        del sessions_store[sid]
+    # If still over limit, remove oldest
+    if len(sessions_store) > MAX_SESSIONS:
+        sorted_sessions = sorted(sessions_store.items(), key=lambda x: x[1].created_at)
+        for sid, _ in sorted_sessions[:len(sessions_store) - MAX_SESSIONS]:
+            del sessions_store[sid]
 
 # Lazy-initialized service (so app starts even without GEMINI_API_KEY)
 _gemini_service = None
@@ -57,6 +85,7 @@ async def stt_status():
 @router.websocket("/ws/transcribe/{session_id}")
 async def websocket_transcribe(websocket: WebSocket, session_id: str):
     await websocket.accept()
+    _cleanup_sessions()
     logger.info("WebSocket connected for session %s", session_id)
 
     # Get or create session
@@ -65,6 +94,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
 
     session = sessions_store[session_id]
     specialty = "general"
+    abha_id = None
     fhir_builder = FHIRBundleBuilder()
     processing_lock = asyncio.Lock()
 
@@ -84,6 +114,9 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                 is_final = message.get("is_final", False)
 
                 if is_final and text:
+                    if len(session.transcript) > 100_000:
+                        await _send_error(websocket, "Transcript limit reached (100KB)")
+                        continue
                     session.transcript += " " + text
 
                     # Send acknowledgment (no auto-processing — extraction
@@ -108,6 +141,8 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
             elif msg_type == "specialty":
                 # Update the specialty for this session
                 new_specialty = message.get("specialty", "general")
+                if new_specialty not in VALID_SPECIALTIES:
+                    new_specialty = "general"
                 specialty = new_specialty
                 await websocket.send_json(
                     {
@@ -115,6 +150,10 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                         "specialty": specialty,
                     }
                 )
+
+            elif msg_type == "abha_id":
+                abha_id = message.get("abha_id")
+                await websocket.send_json({"type": "abha_id_ack", "abha_id": abha_id})
 
             elif msg_type == "process":
                 # Process the full accumulated transcript
@@ -127,6 +166,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                             session.transcript,
                             fhir_builder,
                             specialty=specialty,
+                            abha_id=abha_id,
                         )
                     else:
                         logger.info(
@@ -150,6 +190,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                             session.transcript,
                             fhir_builder,
                             specialty=specialty,
+                            abha_id=abha_id,
                         )
                     elif full_text:
                         logger.info(
@@ -293,6 +334,7 @@ async def _process_and_send(
     transcript_text: str,
     fhir_builder: FHIRBundleBuilder,
     specialty: str = "general",
+    abha_id: str | None = None,
 ):
     """Run Gemini extraction and FHIR bundle generation, send results."""
     cleaned = transcript_text.strip()
@@ -393,7 +435,7 @@ async def _process_and_send(
 
         # Build FHIR bundle (includes DetectedIssue from CDS alerts)
         try:
-            fhir_bundle = fhir_builder.build_bundle(clinical_data, cds_alerts=cds_alerts)
+            fhir_bundle = fhir_builder.build_bundle(clinical_data, cds_alerts=cds_alerts, abha_id=abha_id)
         except Exception as e:
             logger.error("FHIR bundle build failed: %s", e, exc_info=True)
             fhir_bundle = {
@@ -473,7 +515,7 @@ async def _process_and_send(
 
     except Exception as e:
         logger.error("Processing error for session %s: %s", session.id, e, exc_info=True)
-        await _send_error(websocket, f"Processing error: {str(e)}")
+        await _send_error(websocket, "An error occurred during processing. Please try again.")
         await websocket.send_json({"type": "processing", "status": "completed"})
 
 
@@ -514,7 +556,7 @@ async def view_prescription_page(session_id: str):
 <body>
   <div class="card">
     <h1>Prescription Not Found</h1>
-    <p>No prescription data found for session <code>{session_id}</code>.</p>
+    <p>No prescription data found for session <code>{html.escape(session_id)}</code>.</p>
     <p>The session may have expired or the consultation has not been processed yet.</p>
   </div>
 </body>
@@ -522,21 +564,21 @@ async def view_prescription_page(session_id: str):
 
     note = session.clinical_note
     patient = note.patient_info or {}
-    patient_name = patient.get("name") or "Patient"
-    patient_age = patient.get("age") or ""
-    patient_gender = patient.get("gender") or ""
-    date_str = session.created_at.strftime("%d %b %Y, %I:%M %p") if session.created_at else "N/A"
+    patient_name = html.escape(patient.get("name") or "Patient")
+    patient_age = html.escape(str(patient.get("age") or ""))
+    patient_gender = html.escape(patient.get("gender") or "")
+    date_str = html.escape(session.created_at.strftime("%d %b %Y, %I:%M %p") if session.created_at else "N/A")
 
     # Build medications HTML
     meds_html = ""
     if note.medications:
         rows = ""
         for i, m in enumerate(note.medications, 1):
-            med_name = m.name or "Unknown"
-            med_generic = m.generic_name or ""
-            med_dosage = m.dosage or "-"
-            med_freq = m.frequency or "-"
-            med_dur = m.duration or "-"
+            med_name = html.escape(m.name or "Unknown")
+            med_generic = html.escape(m.generic_name or "")
+            med_dosage = html.escape(m.dosage or "-")
+            med_freq = html.escape(m.frequency or "-")
+            med_dur = html.escape(m.duration or "-")
             rows += f"""<tr>
               <td>{i}</td>
               <td><strong>{med_name}</strong><br><span class="generic">{med_generic}</span></td>
@@ -555,7 +597,7 @@ async def view_prescription_page(session_id: str):
     dx_html = ""
     if note.diagnosis:
         items = "".join(
-            f"<li><strong>{d.condition or 'Unknown'}</strong> <span class='code'>{d.icd10_code or ''}</span></li>"
+            f"<li><strong>{html.escape(d.condition or 'Unknown')}</strong> <span class='code'>{html.escape(d.icd10_code or '')}</span></li>"
             for d in note.diagnosis
         )
         dx_html = f"<div class='section'><h3>Diagnosis</h3><ul>{items}</ul></div>"
@@ -563,12 +605,12 @@ async def view_prescription_page(session_id: str):
     # Follow up
     fu_html = ""
     if note.follow_up:
-        fu_html = f"<div class='section followup'><h3>Follow-up</h3><p>{note.follow_up}</p></div>"
+        fu_html = f"<div class='section followup'><h3>Follow-up</h3><p>{html.escape(note.follow_up)}</p></div>"
 
     # Allergies
     allergy_html = ""
     if note.allergies:
-        items = "".join(f"<li>{a}</li>" for a in note.allergies)
+        items = "".join(f"<li>{html.escape(str(a))}</li>" for a in note.allergies)
         allergy_html = f"<div class='section allergy'><h3>Allergies</h3><ul>{items}</ul></div>"
 
     return HTMLResponse(content=f"""<!DOCTYPE html>
@@ -633,7 +675,7 @@ async def view_prescription_page(session_id: str):
       {fu_html}
     </div>
     <div class="footer">
-      Generated by MedScribe AI &mdash; Session {session_id[:20]}...
+      Generated by MedScribe AI &mdash; Session {html.escape(session_id[:20])}...
     </div>
   </div>
 </body>

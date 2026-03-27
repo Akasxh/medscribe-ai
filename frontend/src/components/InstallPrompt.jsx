@@ -53,8 +53,21 @@ export function InstallButton({ className = '' }) {
 
 // Banner version — shown on landing page
 export default function InstallPrompt() {
-  const [dismissed, setDismissed] = useState(false)
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('medscribe_install_dismissed') === 'true'
+    } catch {
+      return false
+    }
+  })
   const { canInstall, install } = useInstallPrompt()
+
+  const handleDismiss = () => {
+    setDismissed(true)
+    try {
+      localStorage.setItem('medscribe_install_dismissed', 'true')
+    } catch {}
+  }
 
   useEffect(() => {
     const handler = (e) => {
@@ -89,7 +102,7 @@ export default function InstallPrompt() {
             Install
           </button>
           <button
-            onClick={() => setDismissed(true)}
+            onClick={handleDismiss}
             className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex-shrink-0"
             aria-label="Dismiss"
           >
@@ -110,7 +123,7 @@ export default function InstallPrompt() {
             <span className="font-medium text-slate-700 dark:text-slate-300">Add to Home Screen</span> — tap Share → "Add to Home Screen"
           </p>
           <button
-            onClick={() => setDismissed(true)}
+            onClick={handleDismiss}
             className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex-shrink-0"
             aria-label="Dismiss"
           >

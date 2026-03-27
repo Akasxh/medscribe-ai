@@ -72,8 +72,6 @@ export default function RecordButton({ isRecording, elapsed, supported, processi
       <button
         onClick={isRecording ? onStop : onStart}
         aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-        role="switch"
-        aria-checked={isRecording}
         className={`
           relative w-[80px] h-[80px] sm:w-[72px] sm:h-[72px] rounded-full flex items-center justify-center transition-all duration-300
           ${isRecording

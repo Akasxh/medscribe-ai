@@ -1,6 +1,16 @@
 import { Download, FileText, Copy, Check, Printer } from 'lucide-react'
 import { useState, useCallback } from 'react'
 
+function escapeHtml(str) {
+  if (!str) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function downloadJSON(data, filename) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
@@ -39,37 +49,37 @@ function generateClinicalNotePDF(data) {
 
 ${patient_info?.name || patient_info?.age || patient_info?.gender ? `
 <div class="patient-banner">
-  ${patient_info.name ? `<span><strong>Name:</strong> ${patient_info.name}</span>` : ''}
-  ${patient_info.age ? `<span><strong>Age:</strong> ${patient_info.age}</span>` : ''}
-  ${patient_info.gender ? `<span><strong>Gender:</strong> ${patient_info.gender}</span>` : ''}
+  ${patient_info.name ? `<span><strong>Name:</strong> ${escapeHtml(patient_info.name)}</span>` : ''}
+  ${patient_info.age ? `<span><strong>Age:</strong> ${escapeHtml(patient_info.age)}</span>` : ''}
+  ${patient_info.gender ? `<span><strong>Gender:</strong> ${escapeHtml(patient_info.gender)}</span>` : ''}
 </div>` : ''}
 
-${chief_complaint ? `<h2>Chief Complaint</h2><p>${chief_complaint}</p>` : ''}
-${history_of_present_illness ? `<h2>History of Present Illness</h2><p>${history_of_present_illness}</p>` : ''}
+${chief_complaint ? `<h2>Chief Complaint</h2><p>${escapeHtml(chief_complaint)}</p>` : ''}
+${history_of_present_illness ? `<h2>History of Present Illness</h2><p>${escapeHtml(history_of_present_illness)}</p>` : ''}
 
 ${symptoms?.length ? `<h2>Symptoms</h2><table><tr><th>Symptom</th><th>Duration</th><th>Severity</th></tr>
-${symptoms.map(s => `<tr><td>${s.description}</td><td>${s.duration || '-'}</td><td>${s.severity || '-'}</td></tr>`).join('')}</table>` : ''}
+${symptoms.map(s => `<tr><td>${escapeHtml(s.description)}</td><td>${escapeHtml(s.duration) || '-'}</td><td>${escapeHtml(s.severity) || '-'}</td></tr>`).join('')}</table>` : ''}
 
 ${vitals && Object.values(vitals).some(v => v) ? `<h2>Vitals</h2><table><tr>
 ${vitals.temperature ? `<th>Temp</th>` : ''}${vitals.bp ? `<th>BP</th>` : ''}${vitals.pulse ? `<th>Pulse</th>` : ''}${vitals.spo2 ? `<th>SpO2</th>` : ''}${vitals.weight ? `<th>Weight</th>` : ''}
 </tr><tr>
-${vitals.temperature ? `<td>${vitals.temperature}</td>` : ''}${vitals.bp ? `<td>${vitals.bp}</td>` : ''}${vitals.pulse ? `<td>${vitals.pulse}</td>` : ''}${vitals.spo2 ? `<td>${vitals.spo2}</td>` : ''}${vitals.weight ? `<td>${vitals.weight}</td>` : ''}
+${vitals.temperature ? `<td>${escapeHtml(vitals.temperature)}</td>` : ''}${vitals.bp ? `<td>${escapeHtml(vitals.bp)}</td>` : ''}${vitals.pulse ? `<td>${escapeHtml(vitals.pulse)}</td>` : ''}${vitals.spo2 ? `<td>${escapeHtml(vitals.spo2)}</td>` : ''}${vitals.weight ? `<td>${escapeHtml(vitals.weight)}</td>` : ''}
 </tr></table>` : ''}
 
 ${diagnosis?.length ? `<h2>Diagnosis</h2><table><tr><th>Condition</th><th>ICD-10</th><th>Certainty</th></tr>
-${diagnosis.map(d => `<tr><td>${d.condition}</td><td><span class="badge badge-icd">${d.icd10_code}</span></td><td><span class="badge badge-${d.certainty}">${d.certainty}</span></td></tr>`).join('')}</table>` : ''}
+${diagnosis.map(d => `<tr><td>${escapeHtml(d.condition)}</td><td><span class="badge badge-icd">${escapeHtml(d.icd10_code)}</span></td><td><span class="badge badge-${escapeHtml(d.certainty)}">${escapeHtml(d.certainty)}</span></td></tr>`).join('')}</table>` : ''}
 
 ${differential_diagnosis?.length ? `<h2>Differential Diagnosis</h2><table><tr><th>Condition</th><th>ICD-10</th><th>Likelihood</th><th>Evidence</th></tr>
-${differential_diagnosis.map(d => `<tr><td>${d.condition}</td><td>${d.icd10_code}</td><td>${d.likelihood}</td><td>${d.supporting_evidence || '-'}</td></tr>`).join('')}</table>` : ''}
+${differential_diagnosis.map(d => `<tr><td>${escapeHtml(d.condition)}</td><td>${escapeHtml(d.icd10_code)}</td><td>${escapeHtml(d.likelihood)}</td><td>${escapeHtml(d.supporting_evidence) || '-'}</td></tr>`).join('')}</table>` : ''}
 
 ${medications?.length ? `<h2>Medications</h2><table><tr><th>Drug</th><th>Generic</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr>
-${medications.map(m => `<tr><td>${m.name}</td><td>${m.generic_name}</td><td>${m.dosage}</td><td>${m.frequency}</td><td>${m.duration}</td></tr>`).join('')}</table>` : ''}
+${medications.map(m => `<tr><td>${escapeHtml(m.name)}</td><td>${escapeHtml(m.generic_name)}</td><td>${escapeHtml(m.dosage)}</td><td>${escapeHtml(m.frequency)}</td><td>${escapeHtml(m.duration)}</td></tr>`).join('')}</table>` : ''}
 
-${allergies?.filter(a => a).length ? `<h2>Allergies</h2><p>${allergies.filter(a => a).join(', ')}</p>` : ''}
-${recommended_tests?.length ? `<h2>Recommended Tests</h2><ul>${recommended_tests.map(t => `<li>${t}</li>`).join('')}</ul>` : ''}
-${risk_factors?.length ? `<h2>Risk Factors</h2><ul>${risk_factors.map(r => `<li>${r}</li>`).join('')}</ul>` : ''}
-${follow_up ? `<h2>Follow Up</h2><p>${follow_up}</p>` : ''}
-${clinical_notes ? `<h2>Clinical Summary</h2><p>${clinical_notes}</p>` : ''}
+${allergies?.filter(a => a).length ? `<h2>Allergies</h2><p>${allergies.filter(a => a).map(a => escapeHtml(a)).join(', ')}</p>` : ''}
+${recommended_tests?.length ? `<h2>Recommended Tests</h2><ul>${recommended_tests.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul>` : ''}
+${risk_factors?.length ? `<h2>Risk Factors</h2><ul>${risk_factors.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>` : ''}
+${follow_up ? `<h2>Follow Up</h2><p>${escapeHtml(follow_up)}</p>` : ''}
+${clinical_notes ? `<h2>Clinical Summary</h2><p>${escapeHtml(clinical_notes)}</p>` : ''}
 
 <div class="footer">
   <p>Generated by MedScribe AI</p>

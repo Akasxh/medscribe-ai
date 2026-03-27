@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from models.fhir_models import (
+    FHIR_R4_BASE,
     PROFILES,
     ICD10_SYSTEM,
     SNOMED_SYSTEM,
@@ -55,56 +56,71 @@ class FHIRBundleBuilder:
         patient = self._build_patient(
             clinical_data.get("patient_info", {}), abha_id=abha_id
         )
-        entries.append({"resource": patient})
+        entries.append({"fullUrl": f"urn:uuid:{patient['id']}", "resource": patient})
 
         # Encounter resource
         encounter = self._build_encounter()
-        entries.append({"resource": encounter})
+        entries.append({"fullUrl": f"urn:uuid:{encounter['id']}", "resource": encounter})
 
         # Condition resources (one per diagnosis)
         for dx in clinical_data.get("diagnosis", []):
             condition = self._build_condition(dx)
-            entries.append({"resource": condition})
+            entries.append({"fullUrl": f"urn:uuid:{condition['id']}", "resource": condition})
 
         # Observation resources for vitals
         vitals = clinical_data.get("vitals", {})
         if vitals:
             for vital_obs in self._build_vital_observations(vitals):
-                entries.append({"resource": vital_obs})
+                entries.append({"fullUrl": f"urn:uuid:{vital_obs['id']}", "resource": vital_obs})
 
         # Observation resources for symptoms
         for symptom in clinical_data.get("symptoms", []):
             obs = self._build_symptom_observation(symptom)
-            entries.append({"resource": obs})
+            entries.append({"fullUrl": f"urn:uuid:{obs['id']}", "resource": obs})
 
         # MedicationRequest resources
         for med in clinical_data.get("medications", []):
             med_req = self._build_medication_request(med)
-            entries.append({"resource": med_req})
+            entries.append({"fullUrl": f"urn:uuid:{med_req['id']}", "resource": med_req})
 
         # AllergyIntolerance resources
         for allergy in clinical_data.get("allergies", []):
             if allergy:
                 allergy_res = self._build_allergy_intolerance(allergy)
-                entries.append({"resource": allergy_res})
+                entries.append({"fullUrl": f"urn:uuid:{allergy_res['id']}", "resource": allergy_res})
 
         # CarePlan for follow-up instructions
         follow_up = clinical_data.get("follow_up")
         recommended_tests = clinical_data.get("recommended_tests", [])
         if follow_up or recommended_tests:
             care_plan = self._build_care_plan(follow_up, recommended_tests)
-            entries.append({"resource": care_plan})
+            entries.append({"fullUrl": f"urn:uuid:{care_plan['id']}", "resource": care_plan})
 
         # ServiceRequest for recommended tests
         for test in recommended_tests:
             if test:
                 service_req = self._build_service_request(test)
-                entries.append({"resource": service_req})
+                entries.append({"fullUrl": f"urn:uuid:{service_req['id']}", "resource": service_req})
 
         # DetectedIssue from CDS alerts (drug interactions, allergy contraindications)
         for alert in (cds_alerts or []):
             detected_issue = self._build_detected_issue(alert)
-            entries.append({"resource": detected_issue})
+            entries.append({"fullUrl": f"urn:uuid:{detected_issue['id']}", "resource": detected_issue})
+
+        # Collect references for Composition sections
+        entry_references = []
+        for entry in entries:
+            res = entry["resource"]
+            rt = res.get("resourceType", "")
+            if rt in ("Condition", "MedicationRequest", "Observation", "AllergyIntolerance", "CarePlan", "ServiceRequest"):
+                entry_references.append({"reference": f"{rt}/{res['id']}", "type": rt})
+
+        # Build Composition as document entry point and insert as first entry
+        composition = self._build_composition(clinical_data, entry_references)
+        entries.insert(0, {
+            "fullUrl": f"urn:uuid:{composition['id']}",
+            "resource": composition
+        })
 
         bundle = {
             "resourceType": "Bundle",
@@ -112,11 +128,47 @@ class FHIRBundleBuilder:
             "meta": {
                 "lastUpdated": self._now_iso(),
             },
-            "type": "collection",
+            "type": "document",
+            "timestamp": self._now_iso(),
             "entry": entries,
         }
 
         return bundle
+
+    def _build_composition(self, clinical_data: dict, entry_references: list[dict]) -> dict:
+        """Build a FHIR Composition resource (required for document bundles)."""
+        sections = []
+        if clinical_data.get("chief_complaint"):
+            sections.append({
+                "title": "Chief Complaint",
+                "code": {"coding": [{"system": LOINC_SYSTEM, "code": "10154-3", "display": "Chief complaint"}]},
+                "text": {"status": "generated", "div": f"<div>{clinical_data['chief_complaint']}</div>"}
+            })
+        if clinical_data.get("diagnosis"):
+            sections.append({
+                "title": "Diagnoses",
+                "code": {"coding": [{"system": LOINC_SYSTEM, "code": "29308-4", "display": "Diagnosis"}]},
+                "entry": [ref for ref in entry_references if ref.get("type") == "Condition"]
+            })
+        if clinical_data.get("medications"):
+            sections.append({
+                "title": "Medications",
+                "code": {"coding": [{"system": LOINC_SYSTEM, "code": "10160-0", "display": "Medications"}]},
+                "entry": [ref for ref in entry_references if ref.get("type") == "MedicationRequest"]
+            })
+
+        comp_id = self._make_id()
+        return {
+            "resourceType": "Composition",
+            "id": comp_id,
+            "status": "final",
+            "type": {"coding": [{"system": LOINC_SYSTEM, "code": "11488-4", "display": "Consult note"}]},
+            "subject": {"reference": f"Patient/{self._patient_id}"},
+            "encounter": {"reference": f"Encounter/{self._encounter_id}"},
+            "date": self._now_iso(),
+            "title": "Clinical Consultation Note",
+            "section": sections,
+        }
 
     def _build_patient(
         self, patient_info: dict, abha_id: Optional[str] = None
@@ -135,14 +187,14 @@ class FHIRBundleBuilder:
         if abha_id:
             resource["identifier"] = [
                 {
-                    "system": "https://healthid.ndhm.gov.in",
+                    "system": "https://abha.abdm.gov.in",
                     "value": abha_id,
                     "type": {
                         "coding": [
                             {
                                 "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
-                                "code": "MR",
-                                "display": "Medical record number",
+                                "code": "ABHA",
+                                "display": "ABHA Health ID",
                             }
                         ]
                     },
@@ -164,12 +216,13 @@ class FHIRBundleBuilder:
             resource["gender"] = gender_map.get(gender, "unknown")
 
         if age:
-            resource["extension"] = [
-                {
-                    "url": "http://hl7.org/fhir/StructureDefinition/patient-age",
-                    "valueString": age,
-                }
-            ]
+            try:
+                age_int = int(''.join(c for c in str(age) if c.isdigit()) or '0')
+                if age_int > 0:
+                    birth_year = datetime.now().year - age_int
+                    resource["birthDate"] = f"{birth_year}-01-01"
+            except (ValueError, TypeError):
+                pass
 
         return resource
 
@@ -187,6 +240,7 @@ class FHIRBundleBuilder:
             "subject": {"reference": f"Patient/{self._patient_id}"},
             "period": {
                 "start": self._now_iso(),
+                "end": self._now_iso(),
             },
         }
 
@@ -327,13 +381,6 @@ class FHIRBundleBuilder:
                 }
             ],
             "code": {
-                "coding": [
-                    {
-                        "system": SNOMED_SYSTEM,
-                        "code": "418799008",
-                        "display": "Symptom",
-                    }
-                ],
                 "text": description,
             },
             "subject": {"reference": f"Patient/{self._patient_id}"},
@@ -377,13 +424,7 @@ class FHIRBundleBuilder:
             "status": "active",
             "intent": "order",
             "medicationCodeableConcept": {
-                "coding": [
-                    {
-                        "system": RXNORM_SYSTEM,
-                        "display": generic_name,
-                    }
-                ],
-                "text": f"{name} ({generic_name})",
+                "text": generic_name or name,
             },
             "subject": {"reference": f"Patient/{self._patient_id}"},
             "encounter": {
@@ -447,6 +488,7 @@ class FHIRBundleBuilder:
                 ]
             },
             "type": "allergy",
+            "category": ["medication"],
             "patient": {"reference": f"Patient/{self._patient_id}"},
             "recordedDate": self._now_iso(),
             "code": {
@@ -560,12 +602,6 @@ class FHIRBundleBuilder:
             "status": "active",
             "intent": "order",
             "code": {
-                "coding": [
-                    {
-                        "system": LOINC_SYSTEM,
-                        "display": test_name,
-                    }
-                ],
                 "text": test_name,
             },
             "subject": {"reference": f"Patient/{self._patient_id}"},

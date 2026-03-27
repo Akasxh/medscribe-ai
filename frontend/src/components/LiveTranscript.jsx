@@ -7,10 +7,13 @@ export default function LiveTranscript({ transcript, interimText, isRecording })
 
   const wordCount = transcript.join(' ').split(/\s+/).filter(Boolean).length
 
-  // Always auto-scroll to bottom
+  // Auto-scroll only if user is near bottom
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    if (!scrollRef.current) return
+    const el = scrollRef.current
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    if (isNearBottom) {
+      el.scrollTop = el.scrollHeight
     }
   }, [transcript.length, interimText])
 

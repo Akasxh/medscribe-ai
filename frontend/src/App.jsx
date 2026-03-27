@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import HealthBanner from './components/HealthBanner'
 import Header from './components/Header'
 import RecordButton from './components/RecordButton'
@@ -19,7 +19,9 @@ import useSafetyScore from './hooks/useSafetyScore'
 import ClinicalNudges from './components/ClinicalNudges'
 import PrescriptionQR from './components/PrescriptionQR'
 import ConsentBanner from './components/ConsentBanner'
+import ABHABadge from './components/ABHABadge'
 import UserRegistration from './components/UserRegistration'
+import ErrorBoundary from './components/ErrorBoundary'
 import useWebSocket from './hooks/useWebSocket'
 import useAudioRecorder from './hooks/useAudioRecorder'
 import LanguageSelector from './components/LanguageSelector'
@@ -30,7 +32,7 @@ import { FileJson, ClipboardList, Shield, RotateCcw } from 'lucide-react'
 const SESSION_STORAGE_KEY = 'medscribe_session_id'
 
 function generateSessionId() {
-  return 'session-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)
+  return crypto.randomUUID()
 }
 
 function getOrCreateSessionId() {
@@ -58,9 +60,12 @@ export default function App() {
   const [specialty, setSpecialty] = useState('general')
   const [abhaId, setAbhaId] = useState(null)
   const [consented, setConsented] = useState(() => sessionStorage.getItem('medscribe_consent') === 'true')
+  const [patientName, setPatientName] = useState('')
   const [speechLang, setSpeechLang] = useState('hi-IN')
   const [useSarvam, setUseSarvam] = useState(false)
   const hasStartedRef = useRef(false)
+  const lastTranscriptRef = useRef('')
+  const lastDemoTranscriptRef = useRef('')
 
   const handleRegister = useCallback((newUser) => {
     setUser(newUser)
@@ -71,7 +76,10 @@ export default function App() {
     setUser(null)
   }, [])
 
+  const ws = useWebSocket(sessionId)
+
   const handleNewConsultation = useCallback(() => {
+    ws.disconnect()
     sessionStorage.removeItem(SESSION_STORAGE_KEY)
     const newId = generateSessionId()
     sessionStorage.setItem(SESSION_STORAGE_KEY, newId)
@@ -79,17 +87,14 @@ export default function App() {
     setTranscriptLines([])
     setActiveTab('note')
     setSpecialty('general')
+    setPatientName('')
     hasStartedRef.current = false
     lastTranscriptRef.current = ''
     lastDemoTranscriptRef.current = ''
-  }, [])
-
-  const ws = useWebSocket(sessionId)
+  }, [ws])
 
   // Safety score hook
   const safetyScore = useSafetyScore(ws.cdsAlerts, ws.fhirQuality, ws.clinicalNote)
-
-  const lastTranscriptRef = useRef('')
 
   const handleTranscript = useCallback((text, isFinal) => {
     if (isFinal) {
@@ -125,6 +130,10 @@ export default function App() {
   }, [ws])
 
   const handleStart = useCallback(() => {
+    if (!consented) {
+      document.getElementById('consent-section')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
     if (!hasStartedRef.current) {
       ws.connect()
       hasStartedRef.current = true
@@ -132,7 +141,7 @@ export default function App() {
     } else {
       recorder.startRecording()
     }
-  }, [ws, recorder])
+  }, [ws, recorder, consented])
 
   const handleStop = useCallback(() => {
     recorder.stopRecording()
@@ -140,7 +149,6 @@ export default function App() {
   }, [recorder, ws])
 
   // Demo mode handler
-  const lastDemoTranscriptRef = useRef('')
   const handleDemoTranscript = useCallback((text, isFinal) => {
     const needsDelay = !hasStartedRef.current
     if (!hasStartedRef.current) {
@@ -158,17 +166,7 @@ export default function App() {
     }, needsDelay ? 800 : 0)
   }, [ws])
 
-  // Auto-switch to Safety tab when critical alerts arrive
-  const prevAlertsRef = useRef(0)
-  useEffect(() => {
-    if (ws.cdsAlerts.length > prevAlertsRef.current) {
-      const hasCritical = ws.cdsAlerts.some(a => a.severity === 'critical')
-      if (hasCritical) {
-        setActiveTab('cds')
-      }
-    }
-    prevAlertsRef.current = ws.cdsAlerts.length
-  }, [ws.cdsAlerts])
+  // Toast notification for critical alerts is sufficient — no auto-tab-switch
 
   const wordCount = useMemo(() => transcriptLines.join(' ').split(/\s+/).filter(Boolean).length, [transcriptLines])
   const resourceCount = ws.fhirBundle?.entry?.length || 0
@@ -188,6 +186,7 @@ export default function App() {
       <Header user={user} onLogout={handleLogout} />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-3 space-y-3">
+        <ErrorBoundary>
         {/* Install Prompt — rendered above content, not floating */}
         <InstallPrompt />
 
@@ -195,10 +194,6 @@ export default function App() {
           <>
             {/* Landing state: hero + compact demo */}
             <LandingHero onStart={handleStart} supported={recorder.supported} />
-            <DemoMode
-              onTranscript={handleDemoTranscript}
-              isRecording={recorder.isRecording}
-            />
           </>
         ) : (
           <>
@@ -212,6 +207,7 @@ export default function App() {
                 <button
                   onClick={handleNewConsultation}
                   disabled={recorder.isRecording}
+                  aria-label="New consultation"
                   className="flex items-center gap-1.5 px-3 py-2.5 min-h-[48px] text-sm sm:text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                 >
                   <RotateCcw className="w-4 h-4 sm:w-3 sm:h-3" />
@@ -249,7 +245,26 @@ export default function App() {
             )}
 
             {/* Consent banner */}
-            <ConsentBanner onConsent={() => setConsented(true)} consented={consented} />
+            <div id="consent-section">
+              <ConsentBanner onConsent={() => setConsented(true)} consented={consented} />
+            </div>
+
+            {/* Patient info — compact inline */}
+            {consented && (
+              <div className="card p-3 flex items-center gap-3">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                  Patient
+                </label>
+                <input
+                  type="text"
+                  value={patientName}
+                  onChange={(e) => setPatientName(e.target.value)}
+                  placeholder="Patient name (optional)"
+                  className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <ABHABadge onAbhaIdChange={setAbhaId} />
+              </div>
+            )}
 
             {/* Recording card — compact with inline demo toggle */}
             <div className="card p-3">
@@ -264,12 +279,6 @@ export default function App() {
                 onStart={handleStart}
                 onStop={handleStop}
               />
-              <div className="mt-2 border-t border-slate-100 dark:border-slate-800 pt-2">
-                <DemoMode
-                  onTranscript={handleDemoTranscript}
-                  isRecording={recorder.isRecording}
-                />
-              </div>
             </div>
 
             {/* Error display */}
@@ -296,8 +305,12 @@ export default function App() {
               {/* Right: Tabbed content (Note / FHIR / Safety) */}
               <div className="space-y-3">
                 {/* Tab switcher — mobile only */}
-                <div className="flex gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl lg:hidden">
+                <div className="flex gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl lg:hidden" role="tablist">
                   <button
+                    id="tab-note"
+                    role="tab"
+                    aria-selected={activeTab === 'note'}
+                    aria-controls="panel-note"
                     onClick={() => setActiveTab('note')}
                     className={`flex-1 flex items-center justify-center gap-2 min-h-[48px] px-2 rounded-lg text-sm font-medium transition-all ${
                       activeTab === 'note'
@@ -309,6 +322,10 @@ export default function App() {
                     Note
                   </button>
                   <button
+                    id="tab-fhir"
+                    role="tab"
+                    aria-selected={activeTab === 'fhir'}
+                    aria-controls="panel-fhir"
                     onClick={() => setActiveTab('fhir')}
                     className={`flex-1 flex items-center justify-center gap-2 min-h-[48px] px-2 rounded-lg text-sm font-medium transition-all ${
                       activeTab === 'fhir'
@@ -325,6 +342,10 @@ export default function App() {
                     )}
                   </button>
                   <button
+                    id="tab-cds"
+                    role="tab"
+                    aria-selected={activeTab === 'cds'}
+                    aria-controls="panel-cds"
                     onClick={() => setActiveTab('cds')}
                     className={`flex-1 flex items-center justify-center gap-2 min-h-[48px] px-2 rounded-lg text-sm font-medium transition-all ${
                       activeTab === 'cds'
@@ -343,7 +364,7 @@ export default function App() {
                 </div>
 
                 {/* Note tab */}
-                <div className={`${activeTab === 'note' ? '' : 'hidden'} lg:block`}>
+                <div id="panel-note" role="tabpanel" aria-labelledby="tab-note" className={`${activeTab === 'note' ? '' : 'hidden'} lg:block`}>
                   <ClinicalNote
                     data={ws.clinicalNote}
                     processing={ws.processing}
@@ -353,7 +374,7 @@ export default function App() {
                 </div>
 
                 {/* FHIR tab */}
-                <div className={`${activeTab === 'fhir' ? '' : 'hidden'} lg:block`}>
+                <div id="panel-fhir" role="tabpanel" aria-labelledby="tab-fhir" className={`${activeTab === 'fhir' ? '' : 'hidden'} lg:block`}>
                   {ws.fhirBundle ? (
                     <>
                       <FHIRQualityBadge quality={ws.fhirQuality} />
@@ -372,7 +393,7 @@ export default function App() {
                 </div>
 
                 {/* Safety tab — SafetyScoreCard inside, then CDSAlerts */}
-                <div className={`${activeTab === 'cds' ? '' : 'hidden'} lg:block`}>
+                <div id="panel-cds" role="tabpanel" aria-labelledby="tab-cds" className={`${activeTab === 'cds' ? '' : 'hidden'} lg:block`}>
                   <SafetyScoreCard {...safetyScore} />
                   {ws.cdsAlerts.length > 0 ? (
                     <div className="mt-2">
@@ -413,11 +434,19 @@ export default function App() {
           </>
         )}
 
-        {/* Footer — compact */}
-        <footer className="text-center py-3 text-[11px] text-slate-400 dark:text-slate-600">
-          MedScribe AI — HACKMATRIX 2.0 (Jilo Health x NJACK IIT Patna)
-        </footer>
+        {/* Demo mode — single instance across hero and active views */}
+        <DemoMode
+          onTranscript={handleDemoTranscript}
+          isRecording={recorder.isRecording}
+        />
+
+        </ErrorBoundary>
       </main>
+
+      {/* Footer — compact */}
+      <footer className="text-center py-3 text-[11px] text-slate-400 dark:text-slate-600">
+        MedScribe AI — HACKMATRIX 2.0 (Jilo Health x NJACK IIT Patna)
+      </footer>
     </div>
   )
 }

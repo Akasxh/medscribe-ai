@@ -1,4 +1,4 @@
-"""AES-256-GCM encryption for clinical data at rest."""
+"""Fernet (AES-128-CBC + HMAC-SHA256) encryption for clinical data at rest."""
 
 import base64
 import hashlib
@@ -11,14 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 def _get_key() -> bytes:
-    """Derive a 256-bit encryption key from env vars.
-
-    In production this would be a proper KMS-managed key.
-    """
-    key_source = os.getenv(
-        "ENCRYPTION_KEY",
-        os.getenv("GEMINI_API_KEY", "medscribe-default-key"),
-    )
+    """Derive a 256-bit key from ENCRYPTION_KEY env var."""
+    key_source = os.getenv("ENCRYPTION_KEY", "")
+    if not key_source:
+        raise ValueError(
+            "ENCRYPTION_KEY environment variable is required. "
+            "Set it to a strong random string for production use."
+        )
     return hashlib.sha256(key_source.encode()).digest()
 
 
@@ -32,15 +31,9 @@ def encrypt_data(data: dict) -> str:
         plaintext = json.dumps(data).encode("utf-8")
         encrypted = f.encrypt(plaintext)
         return encrypted.decode("utf-8")
-    except ImportError:
-        logger.warning(
-            "cryptography package not installed — using base64 encoding (NOT secure for production)"
-        )
-        plaintext = json.dumps(data).encode("utf-8")
-        return base64.b64encode(plaintext).decode("utf-8")
     except Exception as e:
         logger.error(f"Encryption failed: {e}")
-        return base64.b64encode(json.dumps(data).encode("utf-8")).decode("utf-8")
+        raise
 
 
 def decrypt_data(encrypted: str) -> Optional[dict]:

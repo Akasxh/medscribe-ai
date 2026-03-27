@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import { showToast } from '../components/ToastNotification'
 
 const WS_BASE = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`
@@ -22,7 +22,7 @@ export default function useWebSocket(sessionId) {
 
   const connect = useCallback(() => {
     if (!sessionId) return
-    if (wsRef.current?.readyState === WebSocket.OPEN) return
+    if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) return
     intentionalCloseRef.current = false
 
     const url = `${WS_BASE}/ws/transcribe/${sessionId}`
@@ -67,6 +67,7 @@ export default function useWebSocket(sessionId) {
             setInterimText('')
             break
           case 'session_complete':
+            setProcessing(false)
             break
           case 'error':
             setError(msg.message)
@@ -86,9 +87,14 @@ export default function useWebSocket(sessionId) {
         reconnectAttemptsRef.current += 1
         reconnectTimerRef.current = setTimeout(() => connect(), delay)
       }
+
+      if (!intentionalCloseRef.current && reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+        setError('Connection lost. Please refresh the page.')
+      }
     }
 
-    ws.onerror = () => {
+    ws.onerror = (event) => {
+      console.error('WebSocket error:', event)
       setError('WebSocket connection failed')
       setConnected(false)
     }
@@ -137,11 +143,17 @@ export default function useWebSocket(sessionId) {
     }
   }, [])
 
+  const sendAbhaId = useCallback((abhaId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'abha_id', abha_id: abhaId }))
+    }
+  }, [])
+
   useEffect(() => {
     return () => disconnect()
   }, [disconnect])
 
-  return {
+  return useMemo(() => ({
     connected,
     clinicalNote,
     fhirBundle,
@@ -157,5 +169,6 @@ export default function useWebSocket(sessionId) {
     sendProcess,
     sendStop,
     sendSpecialty,
-  }
+    sendAbhaId,
+  }), [connected, clinicalNote, fhirBundle, fhirQuality, cdsAlerts, processing, error, interimText, totalTranscriptLength, connect, disconnect, sendTranscript, sendProcess, sendStop, sendSpecialty, sendAbhaId])
 }
