@@ -2,14 +2,17 @@
 
 # MedScribe AI
 
-**Mobile-first ambient clinical scribe with real-time FHIR R4 conversion**
+### Mobile-First Ambient AI Scribe with Real-Time FHIR R4 Conversion
 
 [![HACKMATRIX 2.0](https://img.shields.io/badge/HACKMATRIX_2.0-Jilo_Health_×_NJACK_IIT_Patna-2563eb?style=for-the-badge)](https://hackathon.jilohealth.com/)
 [![FHIR R4](https://img.shields.io/badge/FHIR-R4_Compliant-059669?style=for-the-badge)](https://hl7.org/fhir/)
 [![ABDM](https://img.shields.io/badge/ABDM-Ready-10b981?style=for-the-badge)](https://abdm.gov.in/)
 [![PWA](https://img.shields.io/badge/PWA-Installable-8b5cf6?style=for-the-badge)]()
+[![Tests](https://img.shields.io/badge/Tests-29_Passing-22c55e?style=for-the-badge)]()
 
-*Speak naturally with your patient in Hindi or English. Get structured clinical notes, FHIR R4 resources, and safety alerts — in real-time.*
+*A doctor opens the app, speaks with their patient in Hindi or English, and structured clinical notes + FHIR R4 resources + safety alerts appear in real-time.*
+
+### **~45 seconds** vs **~10 minutes** for manual documentation
 
 **[Try the Live Demo](https://medscribe-ai-production-851f.up.railway.app/)**
 
@@ -17,9 +20,22 @@
 
 ---
 
-## Screenshots
+## The Problem
 
-### Mobile (PWA)
+Indian doctors spend **3-4 hours daily** on clinical documentation. Existing solutions (Abridge, DAX, DeepCura) don't support **Hindi-English code-mixing**, lack **ABDM/ABHA alignment**, and have no **clinical safety checks**. Rural and non-metro India is completely unserved.
+
+## The Solution
+
+| Step | What Happens |
+|:----:|-------------|
+| **1. Speak** | Doctor speaks naturally with patient — Hindi, English, or code-mixed |
+| **2. Extract** | Gemini 2.5 Flash extracts structured clinical entities in real-time |
+| **3. Document** | FHIR R4 clinical notes, digital prescription, and QR code appear instantly |
+| **4. Protect** | CDS engine checks drug interactions, allergies, dosages — alerts fire immediately |
+
+---
+
+## Screenshots
 
 <div align="center">
 <table>
@@ -36,11 +52,38 @@
 </table>
 </div>
 
-### Desktop
-
-| Active Session | Demo Mode |
+| Active Session (Desktop) | Demo Mode |
 |:-:|:-:|
 | ![Active](docs/screenshots/04-active-session.png) | ![Demo](docs/screenshots/05-demo-running.png) |
+
+---
+
+## What Makes Us Different
+
+<table>
+<tr>
+<td width="50%">
+
+### Clinical Intelligence
+- **Hindi-English code-mixing** — *"Patient ko bukhar hai"* → Fever (ICD-10: R50.9)
+- **60+ Indian drug mappings** — Dolo, Combiflam, Glycomet → generics with SNOMED coding
+- **Clinical Decision Support** — 15+ drug interactions, allergy cross-reactivity (Penicillin↔Cephalosporin), dosage validation
+- **Differential diagnosis** — AI suggests 2-3 alternatives with supporting evidence
+- **Continuous learning** — doctor corrections improve future extractions via few-shot injection
+
+</td>
+<td width="50%">
+
+### Standards & Compliance
+- **FHIR R4 Document Bundle** — Composition + 8 resource types (Patient, Encounter, Condition, Observation, MedicationRequest, AllergyIntolerance, CarePlan, ServiceRequest)
+- **Terminology coding** — ICD-10-CM, SNOMED CT, LOINC, RxNorm
+- **ABDM/ABHA aligned** — Ayushman Bharat Digital Mission compatible
+- **Prescription QR code** — scannable at pharmacy for digital medication handoff
+- **6 specialties** — Cardiology, Diabetology, Pediatrics, Psychiatry, Orthopedics, General Medicine
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -48,25 +91,23 @@
 
 ```mermaid
 graph LR
-    subgraph Client["Frontend (React + Vite)"]
-        MIC[Web Speech API] --> TR[Live Transcript]
-        TR --> UI[Clinical Note + FHIR Viewer]
+    subgraph Client["Frontend (React PWA)"]
+        MIC["🎙 Web Speech API"] --> TR[Live Transcript]
+        TR --> UI["Clinical Note + FHIR + Rx"]
     end
 
     subgraph Server["Backend (FastAPI)"]
-        WS[WebSocket Endpoint]
-        GEM[Gemini 2.5 Flash]
-        CDS[CDS Engine]
-        FHIR[FHIR R4 Generator]
-        TERM[Terminology Service]
-        ENC[Fernet Encryption]
+        WS[WebSocket]
+        GEM["🧠 Gemini 2.5 Flash"]
+        CDS["⚠️ CDS Engine"]
+        FHIR["📋 FHIR R4 Generator"]
+        ENC["🔒 Fernet Encryption"]
     end
 
-    MIC -->|audio chunks| WS
+    MIC -->|transcript stream| WS
     WS --> GEM
     GEM -->|structured JSON| CDS
     GEM --> FHIR
-    FHIR --> TERM
     CDS -->|safety alerts| UI
     FHIR -->|FHIR bundle| UI
     ENC --> FHIR
@@ -75,188 +116,82 @@ graph LR
     style Server fill:#1e293b,stroke:#34d399,color:#e2e8f0
 ```
 
-### Clinical Data Pipeline
-
 ```mermaid
 sequenceDiagram
     actor D as Doctor
-    participant Browser as Web Speech API
+    participant B as Web Speech API
     participant WS as WebSocket
-    participant Gemini as Gemini 2.5 Flash
+    participant G as Gemini 2.5 Flash
     participant CDS as CDS Engine
-    participant FHIR as FHIR Generator
+    participant F as FHIR Generator
 
-    D->>Browser: Speaks with patient (Hindi/English)
-    Browser->>WS: Transcript stream
-    WS->>Gemini: Extract clinical entities
-    Gemini-->>WS: Structured JSON (symptoms, diagnosis, meds)
+    D->>B: Speaks with patient (Hindi/English)
+    B->>WS: Transcript stream
+    WS->>G: Extract clinical entities
+    G-->>WS: Structured JSON
     WS->>CDS: Check drug interactions + allergies
-    CDS-->>Browser: Safety alerts (if any)
-    WS->>FHIR: Generate R4 Bundle
-    FHIR-->>Browser: 8 FHIR resource types
-    Browser-->>D: Clinical note + prescription + QR code
+    CDS-->>B: ⚠️ Safety alerts (if any)
+    WS->>F: Generate R4 Bundle
+    F-->>B: 8 FHIR resource types
+    B-->>D: Clinical note + prescription + QR
 ```
-
----
-
-## Features
-
-- **Hindi-English code-mixed understanding** — *"Patient ko bukhar hai"* becomes Fever (ICD-10: R50.9)
-- **Real-time SOAP notes** — structured clinical notes stream as the doctor speaks
-- **FHIR R4 Document Bundle** — Composition + 8 resource types with ICD-10-CM, SNOMED CT, LOINC coding
-- **Clinical Decision Support** — 15+ drug interactions, 4 allergy rules (incl. Penicillin-Cephalosporin cross-reactivity), dosage checks
-- **Prescription QR code** — scannable at pharmacy for digital medication handoff
-- **Patient safety score** — 0-100 composite clinical risk with animated visualization
-- **6 medical specialties** — Cardiology, Diabetology, Pediatrics, Psychiatry, Orthopedics, General Medicine
-- **60+ Indian drug mappings** — Dolo, Combiflam, Glycomet mapped to generics with SNOMED route coding
-- **Continuous learning** — doctor corrections improve future extractions via few-shot injection
-- **ABDM/ABHA aligned** — Ayushman Bharat Digital Mission compatible, ABHA ID linkage
-- **Encryption at rest** — Fernet (AES-128-CBC + HMAC-SHA256) for all stored clinical data
-- **Security hardened** — CSP, HSTS, XSS prevention, path traversal protection, 29 automated tests
-- **Code-split PWA** — lazy-loaded chunks, GPU animations, ~28KB initial JS bundle
-- **Mobile-first PWA** — installable on any phone, consent-gated recording
 
 ---
 
 ## Security & Data Encryption
 
-All clinical data is encrypted at rest using **Fernet (AES-128-CBC + HMAC-SHA256)**. Patient names, diagnoses, medications, and vitals are never stored in plaintext.
+All clinical data is encrypted at rest using **Fernet (AES-128-CBC + HMAC-SHA256)**. Patient names, diagnoses, medications, and vitals are **never** stored or transmitted in plaintext.
 
 <div align="center">
-<img src="docs/screenshots/encryption-demo.png" width="700" alt="Encryption Demo — plaintext vs ciphertext comparison"/>
-<br/><em>Live encryption demo: clinical data before and after encryption, with tamper detection</em>
+<img src="docs/screenshots/encryption-demo.png" width="700" alt="Encryption Demo — plaintext vs ciphertext packet interception comparison"/>
+<br/><em>Simulated packet interception: plaintext clinical data (top, red) vs Fernet-encrypted ciphertext (bottom, green).<br/>Verification table confirms tamper detection, wrong-key rejection, and unique IV per encryption.</em>
 </div>
 
-**How it works:**
-1. Clinical data (JSON) is serialized and encrypted using a key derived from `ENCRYPTION_KEY` env var (SHA-256 → Fernet key)
-2. Each encryption produces a unique ciphertext (random 128-bit IV per operation)
-3. HMAC-SHA256 verification prevents any tampering — wrong key or modified ciphertext is rejected with `InvalidToken`
-4. Production deployment requires `ENCRYPTION_KEY` — no hardcoded fallbacks
+> **Run it yourself:** `ENCRYPTION_KEY=your-secret python backend/demo_encryption.py`
 
-**Security headers on production:**
+| Test | Result | What it means |
+|------|:------:|--------------|
+| Encrypt → Decrypt roundtrip | ✅ | All clinical fields recovered, zero data loss |
+| Tamper detection (HMAC) | ✅ | Flip 1 byte in ciphertext → `InvalidToken` |
+| Wrong key rejection | ✅ | Only the key holder can decrypt clinical data |
+| Unique IV per encryption | ✅ | Same plaintext → different ciphertext every time |
 
-| Header | Value |
-|--------|-------|
-| X-Frame-Options | `DENY` |
-| X-Content-Type-Options | `nosniff` |
-| Content-Security-Policy | `default-src 'self'` |
-| Referrer-Policy | `strict-origin-when-cross-origin` |
-| Permissions-Policy | `microphone=(self), camera=()` |
-| X-XSS-Protection | `1; mode=block` |
+**Security headers:** X-Frame-Options `DENY`, CSP, HSTS, XSS protection, Referrer-Policy, Permissions-Policy (microphone only).
 
-**Additional protections:** Path traversal prevention, HTML escaping on all user-facing endpoints, session TTL eviction, transcript size caps, hash-based transcript deduplication, specialty allowlist validation, and 29 automated security + correctness tests.
-
----
-
-## How It Works
-
-| Step | What Happens |
-|------|-------------|
-| **1. Record** | Doctor speaks naturally with patient in Hindi, English, or code-mixed |
-| **2. Extract** | Gemini 2.5 Flash extracts structured clinical entities in real-time |
-| **3. Document** | FHIR R4 clinical notes, prescriptions, and QR codes appear instantly |
-| **4. Protect** | CDS engine checks drug interactions, allergies, dosages — alerts fire immediately |
-
-**Result: ~45 seconds vs ~10 minutes for manual documentation.**
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+ and Python 3.10+
-- Chrome or Edge (for Web Speech API)
-- [Gemini API Key](https://aistudio.google.com/apikey) (free tier works)
-
-### Setup
-
-```bash
-git clone https://github.com/Akasxh/medscribe-ai.git
-cd medscribe-ai
-
-# Backend
-echo "GEMINI_API_KEY=your_key_here" > backend/.env
-cd backend
-python3 -m venv venv
-./venv/bin/pip install -r requirements.txt
-cd ..
-
-# Frontend
-cd frontend && npm install && cd ..
-
-# Run both
-npm install
-npm run dev
-```
-
-Open **http://localhost:5173** in Chrome or Edge.
-
-### Docker
-
-```bash
-docker compose up
-```
+**Additional protections:** Path traversal prevention, HTML escaping, session TTL eviction, transcript size caps, hash-based deduplication, specialty allowlist, and **29 automated tests**.
 
 ---
 
 ## Demo Mode
 
-Four built-in scenarios for testing without a microphone:
+Four built-in scenarios — no microphone needed:
 
-| Demo | Scenario | Highlights |
-|------|----------|-----------|
-| **Viral Fever** | Hindi-English OPD, 28M with fever + cough | Drug brand mapping, allergy recording |
-| **Diabetes Follow-up** | 52M, HbA1c 8.2%, neuropathy | Chronic disease management |
-| **Cardiac + Safety** | 58F chest pain, Ecosprin + Combiflam | CDS alerts (Aspirin + NSAID interaction) |
-| **Telemedicine Rural** | 65F from Rampur, breathlessness | Rural India scenario, CHF management |
+| Demo | Scenario | What it showcases |
+|------|----------|-------------------|
+| **Viral Fever** | 28M, Hindi-English OPD, fever + cough | Drug brand mapping (Dolo → Paracetamol), allergy recording |
+| **Diabetes Follow-up** | 52M, HbA1c 8.2%, neuropathy | Chronic disease management, multi-medication |
+| **Cardiac + Safety** | 58F, chest pain, Ecosprin + Combiflam | **CDS alert**: Aspirin + NSAID interaction detected |
+| **Telemedicine Rural** | 65F, Rampur, breathlessness | Rural India scenario, CHF management, telemedicine |
 
 ---
 
-## Project Structure
+## Quick Start
 
+```bash
+git clone https://github.com/Akasxh/medscribe-ai.git && cd medscribe-ai
+
+# Backend
+echo "GEMINI_API_KEY=your_key" > backend/.env
+cd backend && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt && cd ..
+
+# Frontend
+cd frontend && npm install && cd ..
+
+# Run
+npm install && npm run dev
 ```
-medscribe-ai/
-├── backend/
-│   ├── services/
-│   │   ├── gemini_service.py       # Gemini 2.5 Flash integration
-│   │   ├── stt_service.py          # Speech-to-text coordination
-│   │   ├── cds_service.py          # Clinical Decision Support engine
-│   │   ├── fhir_service.py         # FHIR R4 bundle generation
-│   │   ├── terminology_service.py  # ICD-10, SNOMED CT, LOINC mappings
-│   │   ├── encryption_service.py   # AES-256 (Fernet)
-│   │   └── learning_service.py     # Few-shot learning from corrections
-│   ├── models/
-│   │   ├── schemas.py              # Pydantic models
-│   │   └── fhir_models.py          # FHIR resource types
-│   ├── prompts/
-│   │   └── clinical_extraction.py  # Gemini prompt templates
-│   ├── routers/
-│   │   ├── transcribe.py           # WebSocket transcription endpoint
-│   │   └── sessions.py             # Session management
-│   ├── data/
-│   │   ├── icd10_common.json       # ICD-10 code mappings
-│   │   └── drug_reference.json     # Drug interaction database
-│   ├── tests/
-│   │   ├── test_cds_service.py    # Drug interaction + allergy tests
-│   │   ├── test_fhir_service.py   # FHIR bundle structure tests
-│   │   ├── test_encryption.py     # Encryption roundtrip tests
-│   │   └── test_security.py       # XSS prevention tests
-│   ├── main.py
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── components/             # 20+ React components
-│   │   ├── hooks/                  # useAudioRecorder, useWebSocket, useSafetyScore
-│   │   └── utils/                  # FHIR templates, formatters
-│   ├── package.json
-│   └── vite.config.js
-├── docs/
-│   └── screenshots/
-├── docker-compose.yml
-├── Dockerfile
-└── package.json                    # Root: runs both frontend + backend
-```
+
+Open **http://localhost:5173** in Chrome/Edge. Or: `docker compose up`
 
 ---
 
@@ -267,58 +202,25 @@ medscribe-ai/
 | **Frontend** | React 18, Vite, Tailwind CSS, Framer Motion |
 | **Backend** | Python FastAPI, WebSocket, Pydantic |
 | **AI** | Google Gemini 2.5 Flash (structured JSON extraction) |
-| **Speech** | Web Speech API (browser-native, zero cost) |
-| **Data Standard** | FHIR R4 (HL7) with ICD-10, SNOMED CT, LOINC, RxNorm |
-| **Security** | Fernet (AES-128-CBC + HMAC-SHA256), CSP, HSTS, XSS/CSRF protection |
-| **Testing** | pytest (29 tests: CDS, FHIR, encryption, security) |
+| **Speech** | Web Speech API (browser-native, zero API cost) |
+| **Data Standard** | FHIR R4 (HL7) — ICD-10, SNOMED CT, LOINC, RxNorm |
+| **Security** | Fernet (AES-128-CBC + HMAC-SHA256), CSP, HSTS |
 | **Deployment** | Docker, Railway |
 
 ---
 
-## Built For
+<div align="center">
 
-**HACKMATRIX 2.0** — AI/ML in Healthcare Hackathon
+### Built for HACKMATRIX 2.0
 
-- **Organizers**: [Jilo Health](https://jilohealth.com/) x [NJACK IIT Patna](https://njack.iitp.ac.in/)
-- **Problem Statement**: PS-1 — Mobile-First Ambient AI Scribe with Real-Time FHIR Conversion
-- **Team**: MedVani (Solo)
+**AI/ML in Healthcare** — [Jilo Health](https://jilohealth.com/) × [NJACK IIT Patna](https://njack.iitp.ac.in/)
 
----
+PS-1: Mobile-First Ambient AI Scribe with Real-Time FHIR Conversion
 
-## Tests
-
-```bash
-cd backend && ./venv/bin/python -m pytest tests/ -v
-```
-
-```
-tests/test_cds_service.py::test_no_self_interaction_aspirin     PASSED
-tests/test_cds_service.py::test_aspirin_nsaid_interaction       PASSED
-tests/test_cds_service.py::test_warfarin_nsaid_critical         PASSED
-tests/test_cds_service.py::test_penicillin_cephalosporin        PASSED
-tests/test_fhir_service.py::test_bundle_type_is_document        PASSED
-tests/test_fhir_service.py::test_composition_is_first_entry     PASSED
-tests/test_fhir_service.py::test_all_entries_have_fullurl       PASSED
-tests/test_fhir_service.py::test_medication_no_system_without_code  PASSED
-tests/test_fhir_service.py::test_respiratory_rate_mapped        PASSED
-tests/test_encryption.py::test_encrypt_decrypt_roundtrip        PASSED
-tests/test_encryption.py::test_no_key_raises_error              PASSED
-tests/test_security.py::test_html_escape_in_prescription        PASSED
-...
-29 passed in 0.04s
-```
+**Team MedVani** (Solo)
 
 ---
 
-## Contributing
+MIT License
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit with conventional commits
-4. Open a pull request against `master`
-
----
-
-## License
-
-MIT
+</div>
