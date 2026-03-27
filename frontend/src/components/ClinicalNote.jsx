@@ -98,6 +98,7 @@ const VITAL_CONFIG = [
   { key: 'respiratory_rate', label: 'RR', unit: '/min', icon: Wind, normal: (v) => { const n = parseFloat(v); return n >= 12 && n <= 20 } },
   { key: 'weight', label: 'Weight', unit: 'kg', icon: Scale, normal: () => true },
 ]
+const VITAL_CONFIG_MAP = new Map(VITAL_CONFIG.map(v => [v.key, v]))
 
 function getVitalStatus(config, value) {
   if (!value) return 'missing'
@@ -182,27 +183,30 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
     const changes = findChanges(data, editData)
 
     try {
-      for (const change of changes) {
-        await fetch('/api/sessions/corrections', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            session_id: sessionId || 'unknown',
-            transcript: transcript,
-            original_note: data,
-            corrected_note: editData,
-            field_path: change.path,
-          }),
-        })
-      }
-      setCorrectionCount(prev => prev + changes.length)
+      const results = await Promise.allSettled(
+        changes.map(change =>
+          fetch('/api/sessions/corrections', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: sessionId || 'unknown',
+              transcript: transcript,
+              original_note: data,
+              corrected_note: editData,
+              field_path: change.path,
+            }),
+          })
+        )
+      )
+      const successCount = results.filter(r => r.status === 'fulfilled').length
+      setCorrectionCount(prev => prev + successCount)
       if (onNoteUpdated) onNoteUpdated(editData)
     } catch (e) {
       console.error('Failed to save corrections:', e)
+    } finally {
+      setEditing(false)
+      setSaving(false)
     }
-
-    setEditing(false)
-    setSaving(false)
   }, [editData, data, sessionId, transcript, onNoteUpdated])
 
   const cancelEditing = useCallback(() => {
@@ -381,7 +385,7 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {VITAL_CONFIG.map(({ key, label, unit, icon: VIcon }) => {
                 const val = vitals[key]
-                const status = getVitalStatus(VITAL_CONFIG.find(v => v.key === key), val)
+                const status = getVitalStatus(VITAL_CONFIG_MAP.get(key), val)
                 return (
                   <div key={key} className={`border rounded-lg p-2 text-center transition-colors ${vitalStatusStyles[status]}`}>
                     <VIcon className={`w-3.5 h-3.5 mx-auto mb-0.5 ${status === 'missing' ? 'text-slate-300 dark:text-slate-600' : status === 'abnormal' ? 'text-red-500' : 'text-emerald-500'}`} />

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   FileJson, ChevronRight, Copy, Check, Database, Download,
   User, Stethoscope, AlertTriangle, Activity, Pill, ShieldAlert,
@@ -13,7 +13,7 @@ const ICON_MAP = {
 }
 
 // ─── Syntax-highlighted JSON (safe, no innerHTML) ───
-function SyntaxJSON({ data }) {
+const SyntaxJSON = React.memo(function SyntaxJSON({ data }) {
   const json = JSON.stringify(data, null, 2)
 
   // Tokenize and render with React elements instead of dangerouslySetInnerHTML
@@ -59,9 +59,9 @@ function SyntaxJSON({ data }) {
       {tokens}
     </pre>
   )
-}
+})
 
-function ResourceCard({ resource, index }) {
+const ResourceCard = React.memo(function ResourceCard({ resource, index }) {
   const [expanded, setExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
   const type = resource.resourceType
@@ -112,7 +112,7 @@ function ResourceCard({ resource, index }) {
       )}
     </div>
   )
-}
+})
 
 function downloadJSON(data, filename) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })

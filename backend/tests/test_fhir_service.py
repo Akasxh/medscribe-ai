@@ -84,6 +84,71 @@ class TestBundleStructure:
         assert len(bundle["entry"]) >= 2  # At least Composition + Patient
 
 
+    def test_respiratory_rate_mapped(self):
+        """respiratory_rate should produce a FHIR Observation."""
+        data = {
+            "patient_info": {"name": "Test"},
+            "diagnosis": [],
+            "medications": [],
+            "symptoms": [],
+            "vitals": {"respiratory_rate": "18/min"},
+            "allergies": [],
+            "recommended_tests": [],
+        }
+        builder = FHIRBundleBuilder()
+        bundle = builder.build_bundle(data)
+        observations = [e["resource"] for e in bundle["entry"] if e["resource"]["resourceType"] == "Observation"]
+        resp_obs = [o for o in observations if any(
+            c.get("code") == "9279-1" for c in o.get("code", {}).get("coding", [])
+        )]
+        assert len(resp_obs) >= 1, "respiratory_rate should produce an Observation with LOINC 9279-1"
+
+    def test_route_coding_with_known_route(self):
+        """Known routes should have SNOMED code."""
+        data = {
+            "patient_info": {"name": "Test"},
+            "diagnosis": [],
+            "medications": [{"name": "Amoxicillin", "dosage": "500mg", "route": "oral"}],
+            "symptoms": [],
+            "vitals": {},
+            "allergies": [],
+            "recommended_tests": [],
+        }
+        builder = FHIRBundleBuilder()
+        bundle = builder.build_bundle(data)
+        med_requests = [e["resource"] for e in bundle["entry"] if e["resource"]["resourceType"] == "MedicationRequest"]
+        assert len(med_requests) >= 1
+        route = med_requests[0]["dosageInstruction"][0]["route"]
+        assert "coding" in route
+        assert route["coding"][0]["code"] == "26643006"
+
+    def test_route_coding_with_unknown_route(self):
+        """Unknown routes should use text-only, no SNOMED system without code."""
+        data = {
+            "patient_info": {"name": "Test"},
+            "diagnosis": [],
+            "medications": [{"name": "Drug", "dosage": "10mg", "route": "sublingual"}],
+            "symptoms": [],
+            "vitals": {},
+            "allergies": [],
+            "recommended_tests": [],
+        }
+        builder = FHIRBundleBuilder()
+        bundle = builder.build_bundle(data)
+        med_requests = [e["resource"] for e in bundle["entry"] if e["resource"]["resourceType"] == "MedicationRequest"]
+        route = med_requests[0]["dosageInstruction"][0]["route"]
+        assert "coding" not in route, "Unknown route should not have coding with system"
+        assert route.get("text") == "sublingual"
+
+    def test_bundle_timestamp_consistency(self):
+        """All timestamps in a bundle should be identical."""
+        bundle = self.builder.build_bundle(self.clinical_data)
+        ts = bundle["timestamp"]
+        assert bundle["meta"]["lastUpdated"] == ts
+        composition = bundle["entry"][0]["resource"]
+        assert composition["date"] == ts
+
+
 class TestDataFiles:
     def test_icd10_diarrhea_code(self):
         import json

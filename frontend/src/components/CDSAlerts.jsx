@@ -43,7 +43,10 @@ function AlertCard({ alert }) {
     >
       <div
         className="flex items-start gap-2.5 px-3 py-2.5 cursor-pointer select-none"
+        role="button"
+        tabIndex={0}
         onClick={() => !isCritical && setExpanded(!expanded)}
+        onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !isCritical) { e.preventDefault(); setExpanded(!expanded) } }}
       >
         <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${config.text}`} />
         <div className="flex-1 min-w-0">

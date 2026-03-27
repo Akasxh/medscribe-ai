@@ -59,7 +59,7 @@ export default function SafetyScoreCard({ score = 100, level = 'safe', breakdown
       <div className="p-4 flex flex-col items-center gap-3">
         {/* SVG Ring */}
         <div className="relative w-28 h-28">
-          <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+          <svg role="img" aria-label={`Safety score: ${score} out of 100`} viewBox="0 0 100 100" className="w-full h-full -rotate-90">
             {/* Background ring */}
             <circle
               cx="50"

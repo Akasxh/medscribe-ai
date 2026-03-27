@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import uuid
 
@@ -92,7 +92,8 @@ class DifferentialDiagnosis(BaseModel):
 
 class ClinicalNote(BaseModel):
     patient_info: dict = Field(
-        default_factory=lambda: {"name": None, "age": None, "gender": None}
+        default_factory=lambda: {"name": None, "age": None, "gender": None},
+        description="Expected shape: {name: str|None, age: str|None, gender: str|None}",
     )
     chief_complaint: Optional[str] = ""
     history_of_present_illness: Optional[str] = ""
@@ -117,7 +118,7 @@ class ClinicalNote(BaseModel):
 class Session(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     status: SessionStatus = SessionStatus.ACTIVE
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     transcript: str = ""
     clinical_note: Optional[ClinicalNote] = None
     fhir_bundle: Optional[dict] = None

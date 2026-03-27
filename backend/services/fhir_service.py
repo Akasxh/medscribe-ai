@@ -47,6 +47,7 @@ class FHIRBundleBuilder:
         abha_id: Optional[str] = None,
     ) -> dict:
         """Build a complete FHIR R4 Bundle from clinical note data."""
+        self._bundle_timestamp = self._now_iso()
         self._patient_id = self._make_id()
         self._encounter_id = self._make_id()
 
@@ -126,10 +127,10 @@ class FHIRBundleBuilder:
             "resourceType": "Bundle",
             "id": self._make_id(),
             "meta": {
-                "lastUpdated": self._now_iso(),
+                "lastUpdated": self._bundle_timestamp,
             },
             "type": "document",
-            "timestamp": self._now_iso(),
+            "timestamp": self._bundle_timestamp,
             "entry": entries,
         }
 
@@ -165,7 +166,7 @@ class FHIRBundleBuilder:
             "type": {"coding": [{"system": LOINC_SYSTEM, "code": "11488-4", "display": "Consult note"}]},
             "subject": {"reference": f"Patient/{self._patient_id}"},
             "encounter": {"reference": f"Encounter/{self._encounter_id}"},
-            "date": self._now_iso(),
+            "date": self._bundle_timestamp,
             "title": "Clinical Consultation Note",
             "section": sections,
         }
@@ -239,8 +240,8 @@ class FHIRBundleBuilder:
             },
             "subject": {"reference": f"Patient/{self._patient_id}"},
             "period": {
-                "start": self._now_iso(),
-                "end": self._now_iso(),
+                "start": self._bundle_timestamp,
+                "end": self._bundle_timestamp,
             },
         }
 
@@ -291,7 +292,7 @@ class FHIRBundleBuilder:
             },
             "subject": {"reference": f"Patient/{self._patient_id}"},
             "encounter": {"reference": f"Encounter/{self._encounter_id}"},
-            "recordedDate": self._now_iso(),
+            "recordedDate": self._bundle_timestamp,
         }
 
         return resource
@@ -315,6 +316,7 @@ class FHIRBundleBuilder:
                 "display": "Oxygen saturation",
             },
             "weight": {"code": "29463-7", "display": "Body weight"},
+            "respiratory_rate": {"code": "9279-1", "display": "Respiratory rate"},
         }
 
         for vital_key, loinc_info in vital_loinc.items():
@@ -352,7 +354,7 @@ class FHIRBundleBuilder:
                     "encounter": {
                         "reference": f"Encounter/{self._encounter_id}"
                     },
-                    "effectiveDateTime": self._now_iso(),
+                    "effectiveDateTime": self._bundle_timestamp,
                     "valueString": value,
                 }
                 observations.append(obs)
@@ -387,7 +389,7 @@ class FHIRBundleBuilder:
             "encounter": {
                 "reference": f"Encounter/{self._encounter_id}"
             },
-            "effectiveDateTime": self._now_iso(),
+            "effectiveDateTime": self._bundle_timestamp,
             "valueString": description,
         }
 
@@ -430,20 +432,13 @@ class FHIRBundleBuilder:
             "encounter": {
                 "reference": f"Encounter/{self._encounter_id}"
             },
-            "authoredOn": self._now_iso(),
+            "authoredOn": self._bundle_timestamp,
             "dosageInstruction": [
                 {
                     "text": " ".join(
                         p for p in [dosage, frequency, f"for {duration}" if duration else None] if p
                     ),
-                    "route": {
-                        "coding": [
-                            {
-                                "system": SNOMED_SYSTEM,
-                                "display": route,
-                            }
-                        ]
-                    },
+                    "route": self._build_route_coding(route),
                     "doseAndRate": [
                         {
                             "doseQuantity": {
@@ -463,6 +458,30 @@ class FHIRBundleBuilder:
             }
 
         return resource
+
+    @staticmethod
+    def _build_route_coding(route: str) -> dict:
+        """Build route CodeableConcept with SNOMED code when available."""
+        route_codes = {
+            "oral": "26643006",
+            "iv": "47625008",
+            "im": "78421000",
+            "topical": "6064005",
+            "inhalation": "18679011000001101",
+        }
+        route_lower = (route or "").lower()
+        code = route_codes.get(route_lower)
+        if code:
+            return {
+                "coding": [
+                    {
+                        "system": SNOMED_SYSTEM,
+                        "code": code,
+                        "display": route,
+                    }
+                ]
+            }
+        return {"text": route}
 
     def _build_allergy_intolerance(self, allergy: str) -> dict:
         return {
@@ -490,7 +509,7 @@ class FHIRBundleBuilder:
             "type": "allergy",
             "category": ["medication"],
             "patient": {"reference": f"Patient/{self._patient_id}"},
-            "recordedDate": self._now_iso(),
+            "recordedDate": self._bundle_timestamp,
             "code": {
                 "text": allergy,
             },
@@ -533,7 +552,7 @@ class FHIRBundleBuilder:
             "title": "Follow-up Care Plan",
             "subject": {"reference": f"Patient/{self._patient_id}"},
             "encounter": {"reference": f"Encounter/{self._encounter_id}"},
-            "created": self._now_iso(),
+            "created": self._bundle_timestamp,
             "activity": activities,
         }
 
@@ -570,7 +589,7 @@ class FHIRBundleBuilder:
             },
             "severity": severity_map.get(alert.get("severity", "info"), "low"),
             "patient": {"reference": f"Patient/{self._patient_id}"},
-            "identifiedDateTime": self._now_iso(),
+            "identifiedDateTime": self._bundle_timestamp,
             "detail": alert.get("description", ""),
         }
 
@@ -587,7 +606,7 @@ class FHIRBundleBuilder:
                 "action": {
                     "text": alert.get("description", "Review and adjust prescription"),
                 },
-                "date": self._now_iso(),
+                "date": self._bundle_timestamp,
             }
         ]
 
@@ -606,5 +625,5 @@ class FHIRBundleBuilder:
             },
             "subject": {"reference": f"Patient/{self._patient_id}"},
             "encounter": {"reference": f"Encounter/{self._encounter_id}"},
-            "authoredOn": self._now_iso(),
+            "authoredOn": self._bundle_timestamp,
         }
