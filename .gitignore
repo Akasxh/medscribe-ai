@@ -54,4 +54,4 @@ npm-debug.log*
 
 # Internal docs
 docs/superpowers/
-screenshots/
+/screenshots/

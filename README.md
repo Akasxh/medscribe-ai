@@ -59,7 +59,7 @@ graph LR
         CDS[CDS Engine]
         FHIR[FHIR R4 Generator]
         TERM[Terminology Service]
-        ENC[AES-256 Encryption]
+        ENC[Fernet Encryption]
     end
 
     MIC -->|audio chunks| WS
@@ -103,16 +103,48 @@ sequenceDiagram
 
 - **Hindi-English code-mixed understanding** — *"Patient ko bukhar hai"* becomes Fever (ICD-10: R50.9)
 - **Real-time SOAP notes** — structured clinical notes stream as the doctor speaks
-- **FHIR R4 bundle generation** — 8 resource types with ICD-10, SNOMED CT, LOINC, RxNorm coding
-- **Clinical Decision Support** — 15 drug interactions, 3 allergy rules, 10+ dosage checks
+- **FHIR R4 Document Bundle** — Composition + 8 resource types with ICD-10-CM, SNOMED CT, LOINC coding
+- **Clinical Decision Support** — 15+ drug interactions, 4 allergy rules (incl. Penicillin-Cephalosporin cross-reactivity), dosage checks
 - **Prescription QR code** — scannable at pharmacy for digital medication handoff
 - **Patient safety score** — 0-100 composite clinical risk with animated visualization
 - **6 medical specialties** — Cardiology, Diabetology, Pediatrics, Psychiatry, Orthopedics, General Medicine
-- **17+ Indian drug mappings** — Dolo, Combiflam, Glycomet mapped to generics
+- **60+ Indian drug mappings** — Dolo, Combiflam, Glycomet mapped to generics with SNOMED route coding
 - **Continuous learning** — doctor corrections improve future extractions via few-shot injection
-- **ABDM/ABHA aligned** — Ayushman Bharat Digital Mission compatible
-- **AES-256 encryption** — clinical data encrypted at rest
-- **Mobile-first PWA** — installable on any phone, works on flaky networks
+- **ABDM/ABHA aligned** — Ayushman Bharat Digital Mission compatible, ABHA ID linkage
+- **Encryption at rest** — Fernet (AES-128-CBC + HMAC-SHA256) for all stored clinical data
+- **Security hardened** — CSP, HSTS, XSS prevention, path traversal protection, 29 automated tests
+- **Code-split PWA** — lazy-loaded chunks, GPU animations, ~28KB initial JS bundle
+- **Mobile-first PWA** — installable on any phone, consent-gated recording
+
+---
+
+## Security & Data Encryption
+
+All clinical data is encrypted at rest using **Fernet (AES-128-CBC + HMAC-SHA256)**. Patient names, diagnoses, medications, and vitals are never stored in plaintext.
+
+<div align="center">
+<img src="docs/screenshots/encryption-demo.png" width="700" alt="Encryption Demo — plaintext vs ciphertext comparison"/>
+<br/><em>Live encryption demo: clinical data before and after encryption, with tamper detection</em>
+</div>
+
+**How it works:**
+1. Clinical data (JSON) is serialized and encrypted using a key derived from `ENCRYPTION_KEY` env var (SHA-256 → Fernet key)
+2. Each encryption produces a unique ciphertext (random 128-bit IV per operation)
+3. HMAC-SHA256 verification prevents any tampering — wrong key or modified ciphertext is rejected with `InvalidToken`
+4. Production deployment requires `ENCRYPTION_KEY` — no hardcoded fallbacks
+
+**Security headers on production:**
+
+| Header | Value |
+|--------|-------|
+| X-Frame-Options | `DENY` |
+| X-Content-Type-Options | `nosniff` |
+| Content-Security-Policy | `default-src 'self'` |
+| Referrer-Policy | `strict-origin-when-cross-origin` |
+| Permissions-Policy | `microphone=(self), camera=()` |
+| X-XSS-Protection | `1; mode=block` |
+
+**Additional protections:** Path traversal prevention, HTML escaping on all user-facing endpoints, session TTL eviction, transcript size caps, hash-based transcript deduplication, specialty allowlist validation, and 29 automated security + correctness tests.
 
 ---
 
@@ -205,6 +237,11 @@ medscribe-ai/
 │   ├── data/
 │   │   ├── icd10_common.json       # ICD-10 code mappings
 │   │   └── drug_reference.json     # Drug interaction database
+│   ├── tests/
+│   │   ├── test_cds_service.py    # Drug interaction + allergy tests
+│   │   ├── test_fhir_service.py   # FHIR bundle structure tests
+│   │   ├── test_encryption.py     # Encryption roundtrip tests
+│   │   └── test_security.py       # XSS prevention tests
 │   ├── main.py
 │   └── requirements.txt
 ├── frontend/
@@ -232,7 +269,8 @@ medscribe-ai/
 | **AI** | Google Gemini 2.5 Flash (structured JSON extraction) |
 | **Speech** | Web Speech API (browser-native, zero cost) |
 | **Data Standard** | FHIR R4 (HL7) with ICD-10, SNOMED CT, LOINC, RxNorm |
-| **Security** | AES-256 (Fernet), CORS, Security Headers |
+| **Security** | Fernet (AES-128-CBC + HMAC-SHA256), CSP, HSTS, XSS/CSRF protection |
+| **Testing** | pytest (29 tests: CDS, FHIR, encryption, security) |
 | **Deployment** | Docker, Railway |
 
 ---
@@ -244,6 +282,31 @@ medscribe-ai/
 - **Organizers**: [Jilo Health](https://jilohealth.com/) x [NJACK IIT Patna](https://njack.iitp.ac.in/)
 - **Problem Statement**: PS-1 — Mobile-First Ambient AI Scribe with Real-Time FHIR Conversion
 - **Team**: MedVani (Solo)
+
+---
+
+## Tests
+
+```bash
+cd backend && ./venv/bin/python -m pytest tests/ -v
+```
+
+```
+tests/test_cds_service.py::test_no_self_interaction_aspirin     PASSED
+tests/test_cds_service.py::test_aspirin_nsaid_interaction       PASSED
+tests/test_cds_service.py::test_warfarin_nsaid_critical         PASSED
+tests/test_cds_service.py::test_penicillin_cephalosporin        PASSED
+tests/test_fhir_service.py::test_bundle_type_is_document        PASSED
+tests/test_fhir_service.py::test_composition_is_first_entry     PASSED
+tests/test_fhir_service.py::test_all_entries_have_fullurl       PASSED
+tests/test_fhir_service.py::test_medication_no_system_without_code  PASSED
+tests/test_fhir_service.py::test_respiratory_rate_mapped        PASSED
+tests/test_encryption.py::test_encrypt_decrypt_roundtrip        PASSED
+tests/test_encryption.py::test_no_key_raises_error              PASSED
+tests/test_security.py::test_html_escape_in_prescription        PASSED
+...
+29 passed in 0.04s
+```
 
 ---
 
