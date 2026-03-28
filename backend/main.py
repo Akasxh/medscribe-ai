@@ -115,19 +115,40 @@ async def health_check():
 # Serve frontend static files in production (when built frontend is in ./static)
 _static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(_static_dir):
-    _assets_dir = os.path.join(_static_dir, "assets")
-    if os.path.exists(_assets_dir):
-        app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
+    _index_html = os.path.join(_static_dir, "index.html")
 
-    # SPA catch-all — MUST be last route. Serves index.html for all
-    # non-API/WS/rx paths. API paths that don't match any router get 404.
-    # Note: this only catches paths NOT already handled by routers above
-    # because FastAPI checks router paths first (they have specific prefixes).
-    @app.api_route("/{full_path:path}", methods=["GET"], include_in_schema=False)
-    async def serve_spa(full_path: str) -> FileResponse:
-        """SPA fallback: serve index.html for all non-API/WS routes."""
-        safe_root = Path(_static_dir).resolve()
-        requested = (safe_root / full_path).resolve()
-        if str(requested).startswith(str(safe_root)) and requested.is_file():
-            return FileResponse(str(requested))
-        return FileResponse(os.path.join(_static_dir, "index.html"))
+    # Mount static files at specific known paths (not root — that blocks API routes)
+    for subdir in ("assets", "icons"):
+        _sub = os.path.join(_static_dir, subdir)
+        if os.path.exists(_sub):
+            app.mount(f"/{subdir}", StaticFiles(directory=_sub), name=subdir)
+
+    # Serve specific static files at root level (sw.js, manifest.json, etc.)
+    @app.get("/sw.js", include_in_schema=False)
+    @app.get("/manifest.json", include_in_schema=False)
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def serve_static_file(request: Request) -> FileResponse:
+        path = request.url.path.lstrip("/")
+        fpath = os.path.join(_static_dir, path)
+        if os.path.isfile(fpath):
+            return FileResponse(fpath)
+        raise HTTPException(status_code=404)
+
+    # 404 exception handler: serve index.html for non-API GET requests (SPA fallback)
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+
+    @app.exception_handler(StarletteHTTPException)
+    async def spa_fallback(request: Request, exc: StarletteHTTPException):
+        # Only serve SPA for GET requests to non-API paths
+        if (
+            exc.status_code == 404
+            and request.method == "GET"
+            and not request.url.path.startswith(("/api/", "/ws/", "/rx/"))
+        ):
+            return FileResponse(_index_html)
+        # For API 404s, return the original JSON error
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail or "Not found"},
+        )
