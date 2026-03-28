@@ -6,6 +6,8 @@ venv/
 # Environment
 .env
 .env.*
+!.env.production
+!frontend/.env.production
 .env.local
 
 # Build outputs
