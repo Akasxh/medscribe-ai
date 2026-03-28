@@ -4,12 +4,15 @@
 create table if not exists public.admin_users (
     id         uuid primary key default gen_random_uuid(),
     email      text unique not null,
+    password   text not null default 'admin',
     created_at timestamptz not null default now()
 );
 
--- Seed known admin
-insert into public.admin_users (email)
-values ('jhmedvani2026@gmail.com')
+-- Seed known admins
+insert into public.admin_users (email, password)
+values
+    ('jhmedvani2026@gmail.com', 'admin'),
+    ('drakathakash@gmail.com', 'admin')
 on conflict (email) do nothing;
 
 -- RLS: only service-role or admin can read admin_users

@@ -129,8 +129,11 @@ async def list_all_consultations() -> list[dict[str, Any]]:
 
 
 @admin_router.get("/auth/check-admin")
-async def check_admin(email: str = Query(..., description="Email to check")) -> dict[str, bool]:
-    """Check whether the given email belongs to an admin user."""
+async def check_admin(
+    email: str = Query(..., description="Email to check"),
+    password: str = Query("", description="Admin password"),
+) -> dict[str, bool]:
+    """Check whether the given email + password belongs to an admin user."""
     from services.supabase_service import get_service_client
 
     client = get_service_client()
@@ -140,11 +143,15 @@ async def check_admin(email: str = Query(..., description="Email to check")) -> 
     try:
         result = await asyncio.to_thread(
             lambda: client.table("admin_users")
-            .select("email")
+            .select("email, password")
             .eq("email", email.strip().lower())
             .execute()
         )
-        return {"is_admin": len(result.data) > 0}
+        if not result.data:
+            return {"is_admin": False}
+        # Verify password matches
+        stored_password = result.data[0].get("password", "")
+        return {"is_admin": password == stored_password}
     except Exception as exc:
         logger.error("Failed to check admin status: %s", exc)
         return {"is_admin": False}

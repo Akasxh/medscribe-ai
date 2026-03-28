@@ -5,9 +5,10 @@ import useSupabaseAuth from '../hooks/useSupabaseAuth'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
-async function checkAdminRole(userEmail) {
+async function checkAdminRole(userEmail, userPassword = '') {
   try {
-    const res = await fetch(`${API_BASE}/api/auth/check-admin?email=${encodeURIComponent(userEmail)}`)
+    const params = new URLSearchParams({ email: userEmail, password: userPassword })
+    const res = await fetch(`${API_BASE}/api/auth/check-admin?${params}`)
     if (!res.ok) return false
     const data = await res.json()
     return data.is_admin === true
@@ -43,7 +44,7 @@ export default function UserRegistration({ onRegister }) {
         const data = await signIn({ email: email.trim(), password })
         const user = data.user
         // Check admin status from DB via backend
-        const isAdmin = await checkAdminRole(user.email || email.trim())
+        const isAdmin = await checkAdminRole(user.email || email.trim(), password)
         const localUser = {
           name: user.user_metadata?.full_name || email.split('@')[0],
           email: user.email,
@@ -85,7 +86,7 @@ export default function UserRegistration({ onRegister }) {
       setSubmitting(true)
       try {
         // Check admin status from DB before sign-up
-        const isAdmin = await checkAdminRole(email.trim())
+        const isAdmin = await checkAdminRole(email.trim(), password)
         const signUpRole = isAdmin ? 'admin' : 'doctor'
         const data = await signUp({
           email: email.trim(),
