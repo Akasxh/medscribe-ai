@@ -1,18 +1,15 @@
 # Stage 1: Build frontend
 FROM node:20-alpine AS frontend-build
 WORKDIR /app/frontend
+
+# Supabase public keys — baked into the JS bundle at build time by Vite
+ENV VITE_SUPABASE_URL=https://giiazikyvdtyixjzcaix.supabase.co
+ENV VITE_SUPABASE_ANON_KEY=sb_publishable_2WlK76rcEgU0Q-AOFmRqcg_dkFE0ovx
+ENV VITE_ADMIN_EMAIL=jhmedvani2026@gmail.com
+
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
-# Supabase env vars needed at build time (Vite bakes VITE_* into bundle)
-# Railway passes env vars at runtime, but Vite needs them at build time.
-# Use ARG with fallback to hardcoded values for the public (anon) keys.
-ARG VITE_SUPABASE_URL=https://giiazikyvdtyixjzcaix.supabase.co
-ARG VITE_SUPABASE_ANON_KEY=sb_publishable_2WlK76rcEgU0Q-AOFmRqcg_dkFE0ovx
-ARG VITE_ADMIN_EMAIL=jhmedvani2026@gmail.com
-ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
-ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
-ENV VITE_ADMIN_EMAIL=$VITE_ADMIN_EMAIL
 RUN npm run build
 
 # Stage 2: Python backend + serve frontend
