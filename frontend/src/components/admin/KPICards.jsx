@@ -1,4 +1,4 @@
-import { Users, ShieldCheck, Award, AlertOctagon } from 'lucide-react'
+import { Users, ShieldCheck, Award, AlertOctagon, Pill, UserCheck } from 'lucide-react'
 
 function KPICard({ icon: Icon, label, value, sub, color }) {
   const colorMap = {
@@ -6,6 +6,8 @@ function KPICard({ icon: Icon, label, value, sub, color }) {
     emerald: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
     violet: 'bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800',
     red: 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800',
+    pink: 'bg-pink-50 dark:bg-pink-950/30 text-pink-600 dark:text-pink-400 border-pink-200 dark:border-pink-800',
+    amber: 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
   }
 
   const iconBg = {
@@ -13,6 +15,8 @@ function KPICard({ icon: Icon, label, value, sub, color }) {
     emerald: 'bg-emerald-100 dark:bg-emerald-900/50',
     violet: 'bg-violet-100 dark:bg-violet-900/50',
     red: 'bg-red-100 dark:bg-red-900/50',
+    pink: 'bg-pink-100 dark:bg-pink-900/50',
+    amber: 'bg-amber-100 dark:bg-amber-900/50',
   }
 
   return (
@@ -35,7 +39,12 @@ export default function KPICards({ sessions }) {
   const total = sessions.length
   const completed = sessions.filter(s => s.status === 'completed').length
 
-  // Average safety score: derive from cds_alerts — fewer critical alerts = higher score
+  // Active doctors (unique doctor names/ids)
+  const activeDoctors = new Set(
+    sessions.map(s => s.doctor_name || s.clinical_note?.doctor_name || 'Unknown')
+  ).size
+
+  // Average safety score
   const avgSafety = sessions.length > 0
     ? Math.round(
         sessions.reduce((sum, s) => {
@@ -47,23 +56,31 @@ export default function KPICards({ sessions }) {
       )
     : 0
 
-  // FHIR Grade A count
+  // FHIR Grade A percentage
   const fhirACount = sessions.filter(s => s.fhir_quality?.grade === 'A').length
+  const fhirAPct = total > 0 ? Math.round((fhirACount / total) * 100) : 0
 
-  // Critical alert rate
-  const totalCriticals = sessions.reduce(
-    (sum, s) => sum + (s.cds_alerts || []).filter(a => a.severity === 'critical').length,
+  // Total prescriptions
+  const totalPrescriptions = sessions.reduce(
+    (sum, s) => sum + (s.clinical_note?.medications || []).length,
     0
   )
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
       <KPICard
         icon={Users}
         label="Total Consultations"
         value={total}
         sub={`${completed} completed`}
         color="blue"
+      />
+      <KPICard
+        icon={UserCheck}
+        label="Active Doctors"
+        value={activeDoctors}
+        sub="Unique practitioners"
+        color="amber"
       />
       <KPICard
         icon={ShieldCheck}
@@ -75,16 +92,16 @@ export default function KPICards({ sessions }) {
       <KPICard
         icon={Award}
         label="FHIR Grade A"
-        value={fhirACount}
-        sub={`of ${total} sessions`}
+        value={`${fhirAPct}%`}
+        sub={`${fhirACount} of ${total} sessions`}
         color="violet"
       />
       <KPICard
-        icon={AlertOctagon}
-        label="Critical Alerts"
-        value={totalCriticals}
-        sub={total > 0 ? `${((totalCriticals / Math.max(total, 1)) * 100).toFixed(0)}% sessions affected` : 'No sessions yet'}
-        color="red"
+        icon={Pill}
+        label="Total Prescriptions"
+        value={totalPrescriptions}
+        sub={total > 0 ? `~${(totalPrescriptions / Math.max(total, 1)).toFixed(1)} per visit` : 'No sessions yet'}
+        color="pink"
       />
     </div>
   )
