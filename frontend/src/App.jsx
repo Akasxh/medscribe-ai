@@ -226,6 +226,11 @@ export default function App() {
     }, needsDelay ? 800 : 0)
   }, [ws])
 
+  // When demo finishes, send stop to trigger Gemini processing
+  const handleDemoComplete = useCallback(() => {
+    setTimeout(() => ws.sendStop(), 500)
+  }, [ws])
+
   // Toast notification for critical alerts is sufficient — no auto-tab-switch
 
   const wordCount = useMemo(() => transcriptLines.join(' ').split(/\s+/).filter(Boolean).length, [transcriptLines])
@@ -519,6 +524,7 @@ export default function App() {
           <Suspense fallback={<LazyFallback />}>
             <DemoMode
               onTranscript={handleDemoTranscript}
+              onComplete={handleDemoComplete}
               isRecording={recorder.isRecording}
             />
           </Suspense>
