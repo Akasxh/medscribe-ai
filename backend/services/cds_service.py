@@ -151,19 +151,9 @@ DRUG_INTERACTIONS: list[DrugInteraction] = [
             "may cause life-threatening hyperkalemia."
         ),
     ),
-    DrugInteraction(
-        drug_a=frozenset({"montelukast", "montair", "singulair"}),
-        drug_b=frozenset({"theophylline", "deriphyllin", "etofylline",
-                          "aminophylline"}),
-        severity=AlertSeverity.WARNING,
-        title="Montelukast + Theophylline: Increased theophylline levels",
-        description=(
-            "Montelukast (Montair) can inhibit theophylline metabolism, "
-            "raising plasma theophylline levels and increasing the risk "
-            "of toxicity (nausea, tremor, seizures). Monitor theophylline "
-            "levels."
-        ),
-    ),
+    # NOTE: Montelukast + Theophylline interaction removed — montelukast does
+    # not clinically inhibit theophylline metabolism (FDA label confirms no
+    # significant PK interaction at standard doses).
     DrugInteraction(
         drug_a=frozenset({"pantoprazole", "pan-d", "pan d", "pantop",
                           "pantocid"}),
@@ -316,9 +306,7 @@ ALLERGY_RULES: list[AllergyRule] = [
                                      "cotrimoxazole", "septran"}),
         contraindicated_drugs=frozenset({"sulfamethoxazole", "cotrimoxazole",
                                           "septran", "bactrim", "dapsone",
-                                          "sulfasalazine", "silver sulfadiazine",
-                                          "furosemide", "hydrochlorothiazide",
-                                          "thiazide", "celecoxib"}),
+                                          "sulfasalazine", "silver sulfadiazine"}),
         severity=AlertSeverity.WARNING,
         title="Sulfa allergy: Potential cross-reactivity",
         description=(
@@ -565,7 +553,7 @@ def _check_dosage_alerts(medications: list[dict]) -> list[dict]:
         "cefixime": (400.0, "mg"),
         "pantoprazole": (80.0, "mg"),
         "telmisartan": (80.0, "mg"),
-        "aspirin": (650.0, "mg"),
+        "aspirin": (1000.0, "mg"),
         "montelukast": (10.0, "mg"),
     }
 

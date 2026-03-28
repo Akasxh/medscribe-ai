@@ -235,6 +235,7 @@ class FHIRBundleBuilder:
         return {
             "resourceType": "Composition",
             "id": comp_id,
+            "meta": {"profile": [PROFILES["Composition"]]},
             "status": "final",
             "type": {"coding": [{"system": LOINC_SYSTEM, "code": "11488-4", "display": "Consult note"}]},
             "subject": self._patient_ref(),
@@ -850,6 +851,10 @@ class FHIRBundleBuilder:
                     "requestor": True,
                 }
             ],
+            "source": {
+                "observer": self._organization_ref(),
+                "type": [{"system": "http://terminology.hl7.org/CodeSystem/security-source-type", "code": "4", "display": "Application Server"}],
+            },
             "entity": [
                 {
                     "what": self._patient_ref(),

@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# prevent fire-and-forget tasks from being GC'd before completion
+_background_tasks: set = set()
+
 # In-memory session store (shared with sessions router)
 # Imported by sessions.py as well
 sessions_store: dict[str, Session] = {}
@@ -555,7 +558,7 @@ async def _process_and_send(
 
         # Fire-and-forget: persist to Supabase (failure won't break WS)
         try:
-            asyncio.create_task(
+            task = asyncio.create_task(
                 _persist_to_supabase(
                     session_id=session.id,
                     doctor_id=None,  # TODO: wire doctor_id from auth
@@ -567,6 +570,8 @@ async def _process_and_send(
                     specialty=specialty,
                 )
             )
+            _background_tasks.add(task)
+            task.add_done_callback(_background_tasks.discard)
         except Exception as persist_exc:
             logger.warning("Supabase persist_session task failed to start: %s", persist_exc)
 

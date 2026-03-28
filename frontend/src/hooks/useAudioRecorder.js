@@ -132,6 +132,8 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
         recognition.start()
       } catch (e) {
         console.warn('SpeechRecognition.start() failed:', e)
+        isRecordingRef.current = false
+        setIsRecording(false)
       }
     }
 

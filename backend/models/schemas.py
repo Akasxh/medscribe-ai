@@ -119,6 +119,7 @@ class ClinicalNote(BaseModel):
     recommended_tests: List[str] = []
     follow_up: Optional[str] = None
     clinical_notes: Optional[str] = ""
+    specialty_data: Optional[dict] = None
 
     @field_validator("chief_complaint", "history_of_present_illness", "clinical_notes", mode="before")
     @classmethod

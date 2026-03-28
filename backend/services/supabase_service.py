@@ -88,6 +88,10 @@ async def persist_session(
     Designed to be called as ``asyncio.create_task(persist_session(...))``.
     Returns ``True`` on success, ``False`` on skip/failure.
     """
+    if not doctor_id:
+        logger.warning("persist_session: no doctor_id, skipping Supabase write")
+        return False
+
     client = get_service_client()
     if client is None:
         return False
@@ -184,6 +188,7 @@ async def persist_session(
                     .eq("consultation_id", session_id)
                     .execute()
                 )
+                rx_rows: list[dict[str, Any]] = []
                 for med_raw in meds:
                     med = _to_plain(med_raw) if not isinstance(med_raw, dict) else med_raw
                     rx_row: dict[str, Any] = {
@@ -198,9 +203,11 @@ async def persist_session(
                     }
                     if doctor_id:
                         rx_row["doctor_id"] = doctor_id
+                    rx_rows.append(rx_row)
+                if rx_rows:
                     await asyncio.to_thread(
-                        lambda row=rx_row: client.table("prescriptions")
-                        .insert(row)
+                        lambda: client.table("prescriptions")
+                        .insert(rx_rows)
                         .execute()
                     )
 
