@@ -113,19 +113,7 @@ async def health_check():
 
 
 # Serve frontend static files in production (when built frontend is in ./static)
+# Mounted LAST so API/WS routes take priority over the SPA catch-all
 _static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(_static_dir):
-    _assets_dir = os.path.join(_static_dir, "assets")
-    if os.path.exists(_assets_dir):
-        app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
-
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str) -> FileResponse:
-        """SPA fallback: serve index.html for all non-API/WS routes."""
-        if full_path.startswith(("api/", "ws/", "rx/")):
-            raise HTTPException(status_code=404, detail="Not found")
-        safe_root = Path(_static_dir).resolve()
-        requested = (safe_root / full_path).resolve()
-        if str(requested).startswith(str(safe_root)) and requested.is_file():
-            return FileResponse(str(requested))
-        return FileResponse(os.path.join(_static_dir, "index.html"))
+    app.mount("/", StaticFiles(directory=_static_dir, html=True), name="frontend")
