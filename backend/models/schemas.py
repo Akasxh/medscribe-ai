@@ -30,13 +30,22 @@ class Vitals(BaseModel):
     respiratory_rate: Optional[str] = None
 
 
+class DiagnosisCitation(BaseModel):
+    source: str = ""
+    section: Optional[str] = None
+    relevance: str = ""
+
+
 class Diagnosis(BaseModel):
     condition: Optional[str] = ""
     icd10_code: Optional[str] = ""
     certainty: Optional[str] = "suspected"
     confidence: Optional[float] = 0.0
+    evidence_basis: Optional[str] = ""
+    clinical_reasoning: Optional[str] = ""
+    citations: List[DiagnosisCitation] = []
 
-    @field_validator("condition", "icd10_code", "certainty", mode="before")
+    @field_validator("condition", "icd10_code", "certainty", "evidence_basis", "clinical_reasoning", mode="before")
     @classmethod
     def coerce_none_str(cls, v):
         return v if v is not None else ""
@@ -73,8 +82,10 @@ class DifferentialDiagnosis(BaseModel):
     confidence: Optional[float] = 0.0
     supporting_evidence: Optional[str] = ""
     distinguishing_tests: Optional[str] = ""
+    evidence_strength: Optional[str] = ""
+    citations: List[DiagnosisCitation] = []
 
-    @field_validator("condition", "icd10_code", "likelihood", "supporting_evidence", "distinguishing_tests", mode="before")
+    @field_validator("condition", "icd10_code", "likelihood", "supporting_evidence", "distinguishing_tests", "evidence_strength", mode="before")
     @classmethod
     def coerce_none_str(cls, v):
         return v if v is not None else ""
@@ -120,6 +131,10 @@ class Session(BaseModel):
     status: SessionStatus = SessionStatus.ACTIVE
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     transcript: str = ""
+    clinical_note: Optional[ClinicalNote] = None
+    cds_alerts: list = Field(default_factory=list)
+    fhir_quality: Optional[dict] = None
+    fhir_bundle: Optional[dict] = None
     # SHA-256 hashes of normalised transcript segments already appended.
     # Used to deduplicate re-sent finals caused by Web Speech API restarts or
     # WebSocket reconnects.  Not persisted to disk; cleared only on new session.

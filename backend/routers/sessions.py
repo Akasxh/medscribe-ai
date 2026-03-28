@@ -62,3 +62,12 @@ async def get_session(session_id: str):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
+
+
+@router.delete("/{session_id}")
+async def delete_session(session_id: str):
+    """Delete a session by ID."""
+    if session_id in sessions_store:
+        del sessions_store[session_id]
+        return {"deleted": True, "session_id": session_id}
+    raise HTTPException(status_code=404, detail="Session not found")

@@ -22,6 +22,7 @@ from starlette.requests import Request
 
 from routers.transcribe import router as transcribe_router
 from routers.sessions import router as sessions_router
+from routers.drugs import router as drugs_router
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -83,6 +84,7 @@ app.add_middleware(
 # Include routers
 app.include_router(transcribe_router)
 app.include_router(sessions_router)
+app.include_router(drugs_router)
 
 
 @app.on_event("startup")

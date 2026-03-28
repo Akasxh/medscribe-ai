@@ -9,10 +9,46 @@ from models.fhir_models import (
     SNOMED_SYSTEM,
     RXNORM_SYSTEM,
     LOINC_SYSTEM,
+    ABHA_SYSTEM,
 )
 
 
 import re as _re
+
+
+# T4: RxNorm CUI mapping for common generics (at least 20)
+DRUG_RXNORM: dict[str, str] = {
+    "paracetamol": "161",
+    "acetaminophen": "161",
+    "ibuprofen": "5640",
+    "amoxicillin": "723",
+    "azithromycin": "18631",
+    "metformin": "6809",
+    "atorvastatin": "83367",
+    "amlodipine": "17767",
+    "omeprazole": "7646",
+    "pantoprazole": "40790",
+    "cetirizine": "20610",
+    "montelukast": "88249",
+    "losartan": "52175",
+    "metoprolol": "6918",
+    "ciprofloxacin": "2551",
+    "doxycycline": "3640",
+    "prednisone": "8640",
+    "salbutamol": "39108",
+    "aspirin": "1191",
+    "clopidogrel": "32968",
+    "ranitidine": "9143",
+    "enalapril": "3827",
+    "furosemide": "4603",
+    "insulin glargine": "274783",
+    "levothyroxine": "10582",
+    "diclofenac": "3355",
+    "tramadol": "10689",
+    "gabapentin": "25480",
+    "ceftriaxone": "2193",
+    "levofloxacin": "82122",
+}
 
 
 def _parse_dosage_value(dosage: str) -> float:
@@ -27,12 +63,22 @@ def _parse_dosage_unit(dosage: str) -> str:
     return match.group(1) if match else "mg"
 
 
+def _try_parse_bp(value: str) -> tuple[float, float] | None:
+    """Parse BP string like '120/80' into (systolic, diastolic)."""
+    match = _re.match(r"(\d+\.?\d*)\s*/\s*(\d+\.?\d*)", str(value or "").strip())
+    if match:
+        return float(match.group(1)), float(match.group(2))
+    return None
+
+
 class FHIRBundleBuilder:
     """Builds a FHIR R4 Bundle from extracted clinical data."""
 
-    def __init__(self):
-        self._patient_id = None
-        self._encounter_id = None
+    def __init__(self) -> None:
+        self._patient_id: str | None = None
+        self._encounter_id: str | None = None
+        self._practitioner_id: str | None = None
+        self._organization_id: str | None = None
 
     def _make_id(self) -> str:
         return str(uuid.uuid4())
@@ -40,18 +86,40 @@ class FHIRBundleBuilder:
     def _now_iso(self) -> str:
         return datetime.now(timezone.utc).isoformat()
 
+    # -- helpers for urn:uuid references (T1) --
+    def _patient_ref(self) -> dict:
+        return {"reference": f"urn:uuid:{self._patient_id}"}
+
+    def _encounter_ref(self) -> dict:
+        return {"reference": f"urn:uuid:{self._encounter_id}"}
+
+    def _practitioner_ref(self) -> dict:
+        return {"reference": f"urn:uuid:{self._practitioner_id}"}
+
+    def _organization_ref(self) -> dict:
+        return {"reference": f"urn:uuid:{self._organization_id}"}
+
     def build_bundle(
         self,
         clinical_data: dict,
-        cds_alerts: list = None,
+        cds_alerts: list | None = None,
         abha_id: Optional[str] = None,
     ) -> dict:
         """Build a complete FHIR R4 Bundle from clinical note data."""
         self._bundle_timestamp = self._now_iso()
         self._patient_id = self._make_id()
         self._encounter_id = self._make_id()
+        self._practitioner_id = self._make_id()
+        self._organization_id = self._make_id()
 
-        entries = []
+        entries: list[dict] = []
+
+        # T2: Practitioner + Organization
+        practitioner = self._build_practitioner(clinical_data.get("doctor_name"))
+        entries.append({"fullUrl": f"urn:uuid:{practitioner['id']}", "resource": practitioner})
+
+        organization = self._build_organization()
+        entries.append({"fullUrl": f"urn:uuid:{organization['id']}", "resource": organization})
 
         # Patient resource
         patient = self._build_patient(
@@ -103,24 +171,25 @@ class FHIRBundleBuilder:
                 service_req = self._build_service_request(test)
                 entries.append({"fullUrl": f"urn:uuid:{service_req['id']}", "resource": service_req})
 
-        # DetectedIssue from CDS alerts (drug interactions, allergy contraindications)
+        # DetectedIssue from CDS alerts
         for alert in (cds_alerts or []):
             detected_issue = self._build_detected_issue(alert)
             entries.append({"fullUrl": f"urn:uuid:{detected_issue['id']}", "resource": detected_issue})
 
-        # Collect references for Composition sections
-        entry_references = []
+        # Collect references for Composition sections (use urn:uuid)
+        entry_references: list[dict] = []
         for entry in entries:
             res = entry["resource"]
             rt = res.get("resourceType", "")
-            if rt in ("Condition", "MedicationRequest", "Observation", "AllergyIntolerance", "CarePlan", "ServiceRequest"):
-                entry_references.append({"reference": f"{rt}/{res['id']}", "type": rt})
+            if rt in ("Condition", "MedicationRequest", "Observation",
+                       "AllergyIntolerance", "CarePlan", "ServiceRequest"):
+                entry_references.append({"reference": f"urn:uuid:{res['id']}", "type": rt})
 
         # Build Composition as document entry point and insert as first entry
         composition = self._build_composition(clinical_data, entry_references)
         entries.insert(0, {
             "fullUrl": f"urn:uuid:{composition['id']}",
-            "resource": composition
+            "resource": composition,
         })
 
         bundle = {
@@ -138,24 +207,24 @@ class FHIRBundleBuilder:
 
     def _build_composition(self, clinical_data: dict, entry_references: list[dict]) -> dict:
         """Build a FHIR Composition resource (required for document bundles)."""
-        sections = []
+        sections: list[dict] = []
         if clinical_data.get("chief_complaint"):
             sections.append({
                 "title": "Chief Complaint",
                 "code": {"coding": [{"system": LOINC_SYSTEM, "code": "10154-3", "display": "Chief complaint"}]},
-                "text": {"status": "generated", "div": f"<div>{clinical_data['chief_complaint']}</div>"}
+                "text": {"status": "generated", "div": f"<div>{clinical_data['chief_complaint']}</div>"},
             })
         if clinical_data.get("diagnosis"):
             sections.append({
                 "title": "Diagnoses",
                 "code": {"coding": [{"system": LOINC_SYSTEM, "code": "29308-4", "display": "Diagnosis"}]},
-                "entry": [ref for ref in entry_references if ref.get("type") == "Condition"]
+                "entry": [ref for ref in entry_references if ref.get("type") == "Condition"],
             })
         if clinical_data.get("medications"):
             sections.append({
                 "title": "Medications",
                 "code": {"coding": [{"system": LOINC_SYSTEM, "code": "10160-0", "display": "Medications"}]},
-                "entry": [ref for ref in entry_references if ref.get("type") == "MedicationRequest"]
+                "entry": [ref for ref in entry_references if ref.get("type") == "MedicationRequest"],
             })
 
         comp_id = self._make_id()
@@ -164,11 +233,34 @@ class FHIRBundleBuilder:
             "id": comp_id,
             "status": "final",
             "type": {"coding": [{"system": LOINC_SYSTEM, "code": "11488-4", "display": "Consult note"}]},
-            "subject": {"reference": f"Patient/{self._patient_id}"},
-            "encounter": {"reference": f"Encounter/{self._encounter_id}"},
+            "subject": self._patient_ref(),
+            "encounter": self._encounter_ref(),
             "date": self._bundle_timestamp,
+            "author": [self._practitioner_ref()],           # T2
+            "custodian": self._organization_ref(),           # T2
             "title": "Clinical Consultation Note",
             "section": sections,
+        }
+
+    # T2: Practitioner resource
+    def _build_practitioner(self, doctor_name: str | None = None) -> dict:
+        name = doctor_name or "Attending Physician"
+        return {
+            "resourceType": "Practitioner",
+            "id": self._practitioner_id,
+            "meta": {"profile": [PROFILES["Practitioner"]]},
+            "active": True,
+            "name": [{"use": "official", "text": name}],
+        }
+
+    # T2: Organization resource
+    def _build_organization(self) -> dict:
+        return {
+            "resourceType": "Organization",
+            "id": self._organization_id,
+            "meta": {"profile": [PROFILES["Organization"]]},
+            "active": True,
+            "name": "MedScribe AI Clinic",
         }
 
     def _build_patient(
@@ -178,24 +270,24 @@ class FHIRBundleBuilder:
         gender = patient_info.get("gender")
         age = patient_info.get("age")
 
-        resource = {
+        resource: dict = {
             "resourceType": "Patient",
             "id": self._patient_id,
             "meta": {"profile": [PROFILES["Patient"]]},
         }
 
-        # ABHA (Ayushman Bharat Health Account) identifier
+        # T5: ABHA identifier with correct system URI
         if abha_id:
             resource["identifier"] = [
                 {
-                    "system": "https://abha.abdm.gov.in",
+                    "system": ABHA_SYSTEM,
                     "value": abha_id,
                     "type": {
                         "coding": [
                             {
                                 "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
-                                "code": "ABHA",
-                                "display": "ABHA Health ID",
+                                "code": "MR",
+                                "display": "Medical Record Number",
                             }
                         ]
                     },
@@ -238,7 +330,7 @@ class FHIRBundleBuilder:
                 "code": "AMB",
                 "display": "ambulatory",
             },
-            "subject": {"reference": f"Patient/{self._patient_id}"},
+            "subject": self._patient_ref(),
             "period": {
                 "start": self._bundle_timestamp,
                 "end": self._bundle_timestamp,
@@ -256,7 +348,7 @@ class FHIRBundleBuilder:
             "differential": "differential",
         }
 
-        resource = {
+        return {
             "resourceType": "Condition",
             "id": self._make_id(),
             "meta": {"profile": [PROFILES["Condition"]]},
@@ -290,74 +382,166 @@ class FHIRBundleBuilder:
                 ],
                 "text": condition_name,
             },
-            "subject": {"reference": f"Patient/{self._patient_id}"},
-            "encounter": {"reference": f"Encounter/{self._encounter_id}"},
+            "subject": self._patient_ref(),
+            "encounter": self._encounter_ref(),
             "recordedDate": self._bundle_timestamp,
         }
 
-        return resource
-
     def _build_vital_observations(self, vitals: dict) -> list:
         """Build Observation resources for each recorded vital sign."""
-        observations = []
+        observations: list[dict] = []
 
+        # T3: Fixed LOINC codes — SpO2 corrected to 59408-5
         vital_loinc = {
             "temperature": {
                 "code": "8310-5",
                 "display": "Body temperature",
+                "unit": "°F",
+                "ucum": "[degF]",
             },
-            "bp": {
-                "code": "85354-9",
-                "display": "Blood pressure panel",
+            "pulse": {
+                "code": "8867-4",
+                "display": "Heart rate",
+                "unit": "/min",
+                "ucum": "/min",
             },
-            "pulse": {"code": "8867-4", "display": "Heart rate"},
             "spo2": {
-                "code": "2708-6",
-                "display": "Oxygen saturation",
+                "code": "59408-5",
+                "display": "Oxygen saturation by pulse oximetry",
+                "unit": "%",
+                "ucum": "%",
             },
-            "weight": {"code": "29463-7", "display": "Body weight"},
-            "respiratory_rate": {"code": "9279-1", "display": "Respiratory rate"},
+            "weight": {
+                "code": "29463-7",
+                "display": "Body weight",
+                "unit": "kg",
+                "ucum": "kg",
+            },
+            "respiratory_rate": {
+                "code": "9279-1",
+                "display": "Respiratory rate",
+                "unit": "/min",
+                "ucum": "/min",
+            },
         }
 
+        # Process non-BP vitals with valueQuantity where possible
         for vital_key, loinc_info in vital_loinc.items():
             value = vitals.get(vital_key)
-            if value:
-                obs = {
-                    "resourceType": "Observation",
-                    "id": self._make_id(),
-                    "meta": {"profile": [PROFILES["Observation"]]},
-                    "status": "final",
-                    "category": [
-                        {
-                            "coding": [
-                                {
-                                    "system": "http://terminology.hl7.org/CodeSystem/observation-category",
-                                    "code": "vital-signs",
-                                    "display": "Vital Signs",
-                                }
-                            ]
-                        }
-                    ],
-                    "code": {
+            if not value:
+                continue
+
+            obs: dict = {
+                "resourceType": "Observation",
+                "id": self._make_id(),
+                "meta": {"profile": [PROFILES["Observation"]]},
+                "status": "final",
+                "category": [
+                    {
                         "coding": [
                             {
-                                "system": LOINC_SYSTEM,
-                                "code": loinc_info["code"],
-                                "display": loinc_info["display"],
+                                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                                "code": "vital-signs",
+                                "display": "Vital Signs",
                             }
-                        ],
-                        "text": loinc_info["display"],
-                    },
-                    "subject": {
-                        "reference": f"Patient/{self._patient_id}"
-                    },
-                    "encounter": {
-                        "reference": f"Encounter/{self._encounter_id}"
-                    },
-                    "effectiveDateTime": self._bundle_timestamp,
-                    "valueString": value,
+                        ]
+                    }
+                ],
+                "code": {
+                    "coding": [
+                        {
+                            "system": LOINC_SYSTEM,
+                            "code": loinc_info["code"],
+                            "display": loinc_info["display"],
+                        }
+                    ],
+                    "text": loinc_info["display"],
+                },
+                "subject": self._patient_ref(),
+                "encounter": self._encounter_ref(),
+                "effectiveDateTime": self._bundle_timestamp,
+            }
+
+            # Try to extract numeric value for valueQuantity
+            numeric = _re.search(r"(\d+\.?\d*)", str(value))
+            if numeric:
+                obs["valueQuantity"] = {
+                    "value": float(numeric.group(1)),
+                    "unit": loinc_info["unit"],
+                    "system": "http://unitsofmeasure.org",
+                    "code": loinc_info["ucum"],
                 }
-                observations.append(obs)
+            else:
+                obs["valueString"] = str(value)
+
+            observations.append(obs)
+
+        # T3: BP as component structure
+        bp_value = vitals.get("bp")
+        if bp_value:
+            bp_parsed = _try_parse_bp(bp_value)
+            bp_obs: dict = {
+                "resourceType": "Observation",
+                "id": self._make_id(),
+                "meta": {"profile": [PROFILES["Observation"]]},
+                "status": "final",
+                "category": [
+                    {
+                        "coding": [
+                            {
+                                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                                "code": "vital-signs",
+                                "display": "Vital Signs",
+                            }
+                        ]
+                    }
+                ],
+                "code": {
+                    "coding": [
+                        {
+                            "system": LOINC_SYSTEM,
+                            "code": "85354-9",
+                            "display": "Blood pressure panel",
+                        }
+                    ],
+                    "text": "Blood pressure panel",
+                },
+                "subject": self._patient_ref(),
+                "encounter": self._encounter_ref(),
+                "effectiveDateTime": self._bundle_timestamp,
+            }
+
+            if bp_parsed:
+                systolic, diastolic = bp_parsed
+                bp_obs["component"] = [
+                    {
+                        "code": {
+                            "coding": [{"system": LOINC_SYSTEM, "code": "8480-6", "display": "Systolic blood pressure"}],
+                        },
+                        "valueQuantity": {
+                            "value": systolic,
+                            "unit": "mmHg",
+                            "system": "http://unitsofmeasure.org",
+                            "code": "mm[Hg]",
+                        },
+                    },
+                    {
+                        "code": {
+                            "coding": [{"system": LOINC_SYSTEM, "code": "8462-4", "display": "Diastolic blood pressure"}],
+                        },
+                        "valueQuantity": {
+                            "value": diastolic,
+                            "unit": "mmHg",
+                            "system": "http://unitsofmeasure.org",
+                            "code": "mm[Hg]",
+                        },
+                    },
+                ]
+            else:
+                # Fallback: unparseable BP string
+                bp_obs["valueString"] = str(bp_value)
+
+            observations.append(bp_obs)
 
         return observations
 
@@ -366,7 +550,7 @@ class FHIRBundleBuilder:
         duration = symptom.get("duration")
         severity = symptom.get("severity")
 
-        obs = {
+        obs: dict = {
             "resourceType": "Observation",
             "id": self._make_id(),
             "meta": {"profile": [PROFILES["Observation"]]},
@@ -385,10 +569,8 @@ class FHIRBundleBuilder:
             "code": {
                 "text": description,
             },
-            "subject": {"reference": f"Patient/{self._patient_id}"},
-            "encounter": {
-                "reference": f"Encounter/{self._encounter_id}"
-            },
+            "subject": self._patient_ref(),
+            "encounter": self._encounter_ref(),
             "effectiveDateTime": self._bundle_timestamp,
             "valueString": description,
         }
@@ -397,11 +579,21 @@ class FHIRBundleBuilder:
             obs["note"] = [{"text": f"Duration: {duration}"}]
 
         if severity:
+            # Map severity to HL7 interpretation codes
+            severity_code_map = {
+                "severe": "H",
+                "high": "H",
+                "moderate": "N",
+                "mild": "L",
+                "low": "L",
+            }
+            code = severity_code_map.get(severity.lower(), "N") if severity else "N"
             obs["interpretation"] = [
                 {
                     "coding": [
                         {
                             "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                            "code": code,
                             "display": severity,
                         }
                     ],
@@ -419,19 +611,28 @@ class FHIRBundleBuilder:
         duration = medication.get("duration") or ""
         route = medication.get("route") or "oral"
 
-        resource = {
+        # T4: Build medicationCodeableConcept with RxNorm coding
+        med_concept: dict = {"text": generic_name or name}
+        rxcui = DRUG_RXNORM.get((generic_name or name).lower())
+        if rxcui:
+            med_concept["coding"] = [
+                {
+                    "system": RXNORM_SYSTEM,
+                    "code": rxcui,
+                    "display": generic_name or name,
+                }
+            ]
+
+        resource: dict = {
             "resourceType": "MedicationRequest",
             "id": self._make_id(),
             "meta": {"profile": [PROFILES["MedicationRequest"]]},
             "status": "active",
             "intent": "order",
-            "medicationCodeableConcept": {
-                "text": generic_name or name,
-            },
-            "subject": {"reference": f"Patient/{self._patient_id}"},
-            "encounter": {
-                "reference": f"Encounter/{self._encounter_id}"
-            },
+            "medicationCodeableConcept": med_concept,
+            "subject": self._patient_ref(),
+            "encounter": self._encounter_ref(),
+            "requester": self._practitioner_ref(),          # T2
             "authoredOn": self._bundle_timestamp,
             "dosageInstruction": [
                 {
@@ -508,7 +709,7 @@ class FHIRBundleBuilder:
             },
             "type": "allergy",
             "category": ["medication"],
-            "patient": {"reference": f"Patient/{self._patient_id}"},
+            "patient": self._patient_ref(),
             "recordedDate": self._bundle_timestamp,
             "code": {
                 "text": allergy,
@@ -519,7 +720,7 @@ class FHIRBundleBuilder:
         self, follow_up: Optional[str], recommended_tests: list
     ) -> dict:
         """Build a CarePlan resource for follow-up and test recommendations."""
-        activities = []
+        activities: list[dict] = []
 
         if follow_up:
             activities.append({
@@ -550,8 +751,8 @@ class FHIRBundleBuilder:
             "status": "active",
             "intent": "plan",
             "title": "Follow-up Care Plan",
-            "subject": {"reference": f"Patient/{self._patient_id}"},
-            "encounter": {"reference": f"Encounter/{self._encounter_id}"},
+            "subject": self._patient_ref(),
+            "encounter": self._encounter_ref(),
             "created": self._bundle_timestamp,
             "activity": activities,
         }
@@ -563,16 +764,17 @@ class FHIRBundleBuilder:
             "warning": "moderate",
             "info": "low",
         }
+        # T5: Fix DetectedIssue codes — DRG→DINT, ALGY→ALG, DOSE→DOSEIVL
         code_map = {
-            "drug_interaction": {"code": "DRG", "display": "Drug Interaction Alert"},
-            "allergy_contraindication": {"code": "ALGY", "display": "Allergy Contraindication"},
-            "dosage_alert": {"code": "DOSE", "display": "Dosage Issue"},
+            "drug_interaction": {"code": "DINT", "display": "Drug Interaction Alert"},
+            "allergy_contraindication": {"code": "ALG", "display": "Allergy Alert"},
+            "dosage_alert": {"code": "DOSEIVL", "display": "Dosage Interval Issue"},
         }
 
         alert_type = alert.get("type", "drug_interaction")
         code_info = code_map.get(alert_type, code_map["drug_interaction"])
 
-        resource = {
+        resource: dict = {
             "resourceType": "DetectedIssue",
             "id": self._make_id(),
             "meta": {"profile": [PROFILES["DetectedIssue"]]},
@@ -588,7 +790,7 @@ class FHIRBundleBuilder:
                 "text": alert.get("title", "Clinical alert"),
             },
             "severity": severity_map.get(alert.get("severity", "info"), "low"),
-            "patient": {"reference": f"Patient/{self._patient_id}"},
+            "patient": self._patient_ref(),
             "identifiedDateTime": self._bundle_timestamp,
             "detail": alert.get("description", ""),
         }
@@ -623,7 +825,8 @@ class FHIRBundleBuilder:
             "code": {
                 "text": test_name,
             },
-            "subject": {"reference": f"Patient/{self._patient_id}"},
-            "encounter": {"reference": f"Encounter/{self._encounter_id}"},
+            "subject": self._patient_ref(),
+            "encounter": self._encounter_ref(),
+            "requester": self._practitioner_ref(),           # T2
             "authoredOn": self._bundle_timestamp,
         }

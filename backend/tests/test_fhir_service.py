@@ -56,7 +56,7 @@ class TestBundleStructure:
         patient = next(e["resource"] for e in bundle["entry"] if e["resource"]["resourceType"] == "Patient")
         assert "identifier" in patient
         abha_id = patient["identifier"][0]
-        assert abha_id["system"] == "https://abha.abdm.gov.in"
+        assert abha_id["system"] == "https://healthid.ndhm.gov.in"
         assert abha_id["value"] == "12345678901234"
 
     def test_medication_no_system_without_code(self):

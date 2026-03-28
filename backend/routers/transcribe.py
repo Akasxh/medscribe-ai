@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 
 from models.schemas import Session, SessionStatus, ClinicalNote
@@ -470,7 +470,7 @@ async def _process_and_send(
             logger.error("FHIR bundle build failed: %s", e, exc_info=True)
             fhir_bundle = {
                 "resourceType": "Bundle",
-                "type": "collection",
+                "type": "document",
                 "entry": [],
             }
         session.fhir_bundle = fhir_bundle
@@ -503,6 +503,10 @@ async def _process_and_send(
                 else "C" if s >= 60
                 else "D"
             )
+
+        # Persist CDS alerts and FHIR quality on session
+        session.cds_alerts = cds_alerts
+        session.fhir_quality = fhir_quality
 
         await websocket.send_json(
             {
@@ -542,7 +546,7 @@ async def get_prescription(session_id: str):
     """Get prescription data for a session (for QR code scanning)."""
     session = sessions_store.get(session_id)
     if not session:
-        return {"error": "Session not found", "session_id": session_id}
+        raise HTTPException(status_code=404, detail="Session not found")
     return {
         "session_id": session_id,
         "clinical_note": session.clinical_note.model_dump() if session.clinical_note else None,

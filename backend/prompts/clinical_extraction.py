@@ -33,7 +33,16 @@ Return a JSON object with exactly these fields:
       "condition": "string - diagnosis in English",
       "icd10_code": "string - ICD-10 code (e.g. 'R50.9')",
       "certainty": "confirmed | suspected | differential",
-      "confidence": "number 0.0-1.0 - how confident you are based on the evidence"
+      "confidence": "number 0.0-1.0 - how confident you are based on the evidence",
+      "evidence_basis": "string - which symptoms/vitals from transcript support this",
+      "clinical_reasoning": "string - 1-2 sentence justification",
+      "citations": [
+        {
+          "source": "guideline name (ICMR STW, WHO, API, NHM, RSSDI, RNTCP)",
+          "section": "string or null",
+          "relevance": "how this guideline supports the diagnosis"
+        }
+      ]
     }
   ],
   "medications": [
@@ -55,7 +64,15 @@ Return a JSON object with exactly these fields:
       "likelihood": "high | moderate | low",
       "confidence": "number 0.0-1.0",
       "supporting_evidence": "string - which symptoms/findings support this",
-      "distinguishing_tests": "string - what test would confirm/rule out this"
+      "distinguishing_tests": "string - what test would confirm/rule out this",
+      "evidence_strength": "string - strong | moderate | weak based on available transcript data",
+      "citations": [
+        {
+          "source": "guideline name (ICMR STW, WHO, API, NHM, RSSDI, RNTCP)",
+          "section": "string or null",
+          "relevance": "how this guideline supports considering this differential"
+        }
+      ]
     }
   ],
   "risk_factors": ["string - identified risk factors from the conversation"],
@@ -190,6 +207,15 @@ Return a JSON object with exactly these fields:
 11. **clinical_notes**: Write a professional, well-formatted English clinical note suitable for medical records.
 12. **Short or unclear transcripts**: If the transcript is very short, incomplete, or unclear, extract whatever you can. Use null for missing fields and empty arrays for missing lists. Always return valid JSON matching the schema — never return an error message or explanation instead of the JSON.
 13. **Always return the full schema**: Even if no useful information can be extracted, return the complete JSON structure with null values and empty arrays. Never omit fields.
+14. **Citation guidelines**: For each diagnosis, cite 1-3 relevant guidelines from:
+    - ICMR Standard Treatment Workflows (STW)
+    - WHO Clinical Guidelines
+    - API (Association of Physicians of India) Medicine Update
+    - NHM Treatment Protocols
+    - RSSDI Guidelines (diabetes)
+    - RNTCP (tuberculosis)
+    Never invent citations. Use empty array if uncertain.
+15. **Evidence fields**: Populate evidence_basis with specific transcript findings (symptoms, vitals, history) that support the diagnosis. Populate clinical_reasoning with the inferential step connecting evidence to diagnosis.
 """
 
 USER_PROMPT_TEMPLATE = """## Transcript
