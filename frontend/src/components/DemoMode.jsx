@@ -1,4 +1,4 @@
-import { FlaskConical } from 'lucide-react'
+import { FlaskConical, ChevronRight, ChevronDown } from 'lucide-react'
 import { useState, useRef, useEffect, useCallback } from 'react'
 
 const DEMO_CONVERSATIONS = [
@@ -174,7 +174,7 @@ export default function DemoMode({ onTranscript, isRecording }) {
         <div className="flex items-center gap-2">
           <FlaskConical className="w-4 h-4 sm:w-3 sm:h-3 text-indigo-500" />
           <span className="text-sm sm:text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-            Demo Scenarios {collapsed ? '\u25B8' : '\u25BE'}
+            Demo Scenarios {collapsed ? <ChevronRight className="w-3 h-3 inline" /> : <ChevronDown className="w-3 h-3 inline" />}
           </span>
           {playing && (
             <span className="px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-[10px] font-medium text-indigo-600 dark:text-indigo-400">

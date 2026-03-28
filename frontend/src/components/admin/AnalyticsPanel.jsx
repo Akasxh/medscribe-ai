@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -20,6 +20,13 @@ function detectLanguage(text) {
 }
 
 export default function AnalyticsPanel({ sessions }) {
+  const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'))
+  useEffect(() => {
+    const observer = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')))
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
+
   // Consultations per day
   const perDay = useMemo(() => {
     const map = {}
@@ -85,12 +92,12 @@ export default function AnalyticsPanel({ sessions }) {
               <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
               <Tooltip
                 contentStyle={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
+                  background: isDark ? '#1e293b' : '#ffffff',
+                  border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
                   borderRadius: '8px',
                   fontSize: '12px',
+                  color: isDark ? '#f1f5f9' : '#0f172a',
                 }}
-                wrapperClassName="[.dark_&]:!bg-slate-800 [.dark_&]:!border-slate-700"
               />
               <Bar dataKey="count" fill="#2563EB" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -108,12 +115,12 @@ export default function AnalyticsPanel({ sessions }) {
               <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={100} />
               <Tooltip
                 contentStyle={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
+                  background: isDark ? '#1e293b' : '#ffffff',
+                  border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
                   borderRadius: '8px',
                   fontSize: '12px',
+                  color: isDark ? '#f1f5f9' : '#0f172a',
                 }}
-                wrapperClassName="[.dark_&]:!bg-slate-800 [.dark_&]:!border-slate-700"
               />
               <Bar dataKey="count" fill="#10B981" radius={[0, 4, 4, 0]} />
             </BarChart>
@@ -144,12 +151,12 @@ export default function AnalyticsPanel({ sessions }) {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
+                  background: isDark ? '#1e293b' : '#ffffff',
+                  border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
                   borderRadius: '8px',
                   fontSize: '12px',
+                  color: isDark ? '#f1f5f9' : '#0f172a',
                 }}
-                wrapperClassName="[.dark_&]:!bg-slate-800 [.dark_&]:!border-slate-700"
               />
               <Legend wrapperStyle={{ fontSize: '11px' }} />
             </PieChart>

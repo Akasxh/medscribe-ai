@@ -456,12 +456,14 @@ export default function App() {
         )}
 
         {/* Demo mode — single instance across hero and active views */}
-        <Suspense fallback={<LazyFallback />}>
-          <DemoMode
-            onTranscript={handleDemoTranscript}
-            isRecording={recorder.isRecording}
-          />
-        </Suspense>
+        <div className="card p-0 overflow-hidden">
+          <Suspense fallback={<LazyFallback />}>
+            <DemoMode
+              onTranscript={handleDemoTranscript}
+              isRecording={recorder.isRecording}
+            />
+          </Suspense>
+        </div>
 
         </ErrorBoundary>
       </main>

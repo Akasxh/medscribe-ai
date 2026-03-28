@@ -149,6 +149,10 @@ export default function ExportPanel({ clinicalNote, fhirBundle }) {
 
   return (
     <div className="card p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Download className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Export</h3>
+      </div>
       <div className="flex flex-col sm:flex-row gap-2">
       {clinicalNote && (
         <ExportButton

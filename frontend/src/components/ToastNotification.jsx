@@ -63,10 +63,10 @@ function ToastItem({ toast, onDismiss }) {
         </p>
         <button
           onClick={() => onDismiss(toast.id)}
-          className="p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
+          className="min-w-[32px] min-h-[32px] flex items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
           aria-label="Dismiss"
         >
-          <X className="w-3.5 h-3.5 text-slate-400" />
+          <X className="w-4 h-4 text-slate-400" />
         </button>
       </div>
       {/* Progress bar */}
