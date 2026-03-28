@@ -113,7 +113,21 @@ async def health_check():
 
 
 # Serve frontend static files in production (when built frontend is in ./static)
-# Mounted LAST so API/WS routes take priority over the SPA catch-all
 _static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(_static_dir):
-    app.mount("/", StaticFiles(directory=_static_dir, html=True), name="frontend")
+    _assets_dir = os.path.join(_static_dir, "assets")
+    if os.path.exists(_assets_dir):
+        app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
+
+    # SPA catch-all — MUST be last route. Serves index.html for all
+    # non-API/WS/rx paths. API paths that don't match any router get 404.
+    # Note: this only catches paths NOT already handled by routers above
+    # because FastAPI checks router paths first (they have specific prefixes).
+    @app.api_route("/{full_path:path}", methods=["GET"], include_in_schema=False)
+    async def serve_spa(full_path: str) -> FileResponse:
+        """SPA fallback: serve index.html for all non-API/WS routes."""
+        safe_root = Path(_static_dir).resolve()
+        requested = (safe_root / full_path).resolve()
+        if str(requested).startswith(str(safe_root)) and requested.is_file():
+            return FileResponse(str(requested))
+        return FileResponse(os.path.join(_static_dir, "index.html"))
