@@ -117,6 +117,11 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
 
         if (['network', 'audio-capture', 'service-not-allowed'].includes(error)) {
           isRecordingRef.current = false
+          setIsRecording(false)
+          if (timerRef.current) {
+            clearInterval(timerRef.current)
+            timerRef.current = null
+          }
         }
       }
 

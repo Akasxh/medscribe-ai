@@ -83,6 +83,7 @@ export default function useWebSocket(sessionId) {
         }
       } catch (e) {
         console.error('WS parse error:', e)
+        setProcessing(false)
       }
     }
 

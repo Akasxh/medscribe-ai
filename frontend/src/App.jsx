@@ -73,6 +73,7 @@ export default function App() {
   const [consented, setConsented] = useState(() => sessionStorage.getItem('medscribe_consent') === 'true')
   const [patientName, setPatientName] = useState('')
   const [speechLang, setSpeechLang] = useState('hi-IN')
+  const [demoPlaying, setDemoPlaying] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
   const hasStartedRef = useRef(false)
   // Set-based dedup for all final transcripts (live + demo) — catches non-consecutive duplicates
@@ -281,7 +282,7 @@ export default function App() {
                 </div>
                 <button
                   onClick={handleNewConsultation}
-                  disabled={recorder.isRecording}
+                  disabled={recorder.isRecording || demoPlaying}
                   aria-label="New consultation"
                   className="flex items-center gap-1.5 px-3 py-2.5 min-h-[48px] text-sm sm:text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                 >
@@ -526,6 +527,7 @@ export default function App() {
               onTranscript={handleDemoTranscript}
               onComplete={handleDemoComplete}
               isRecording={recorder.isRecording}
+              onPlayingChange={setDemoPlaying}
             />
           </Suspense>
         </div>
