@@ -27,7 +27,7 @@ const features = [
 
 const trustIndicators = [
   { label: '6 Medical Specialties', icon: Stethoscope },
-  { label: '15+ Drug Interaction Rules', icon: Shield },
+  { label: '20+ Safety Rules', icon: Shield },
   { label: 'ICD-10 + SNOMED + LOINC', icon: Database },
   { label: 'Fernet Encrypted (AES-128)', icon: Shield },
 ]

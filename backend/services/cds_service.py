@@ -250,6 +250,34 @@ DRUG_INTERACTIONS: list[DrugInteraction] = [
             "switching to Atorvastatin or Rosuvastatin."
         ),
     ),
+    DrugInteraction(
+        drug_a=frozenset({"escitalopram", "nexito", "fluoxetine", "sertraline",
+                          "paroxetine", "ssri"}),
+        drug_b=frozenset({"ibuprofen", "combiflam", "diclofenac", "voveran",
+                          "aceclofenac", "zerodol", "aspirin", "ecosprin",
+                          "nsaid", "naproxen", "piroxicam"}),
+        severity=AlertSeverity.WARNING,
+        title="SSRI + NSAID: Increased GI bleeding risk",
+        description=(
+            "Concurrent SSRI and NSAID use increases risk of "
+            "gastrointestinal bleeding by 3-15x. Consider adding a PPI "
+            "for gastroprotection."
+        ),
+    ),
+    DrugInteraction(
+        drug_a=frozenset({"enalapril", "enam", "ramipril", "cardace", "lisinopril",
+                          "ace inhibitor", "acei"}),
+        drug_b=frozenset({"losartan", "losar", "telmisartan", "telma", "valsartan",
+                          "olmesartan", "arb"}),
+        severity=AlertSeverity.CRITICAL,
+        title="ACE Inhibitor + ARB: Dual RAAS blockade \u2014 hyperkalemia risk",
+        description=(
+            "Combining ACE inhibitors with ARBs (dual RAAS blockade) "
+            "significantly increases risk of hyperkalemia, renal failure, "
+            "and hypotension. Avoid concurrent use unless under specialist "
+            "supervision."
+        ),
+    ),
 ]
 
 
