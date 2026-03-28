@@ -18,7 +18,7 @@ export default function useSupabaseAuth() {
       setSession(s)
       setUser(s?.user ?? null)
       setLoading(false)
-    })
+    }).catch(() => setLoading(false))
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

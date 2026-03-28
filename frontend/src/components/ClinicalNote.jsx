@@ -49,7 +49,7 @@ function Section({ icon: Icon, title, color, children, defaultOpen = true, count
       <div
         ref={contentRef}
         style={{ height: typeof height === 'number' ? `${height}px` : height }}
-        className="overflow-hidden transition-[height] duration-250 ease-in-out"
+        className="overflow-hidden transition-[height] duration-300 ease-in-out"
       >
         <div className="px-4 pb-3 pt-1">{children}</div>
       </div>

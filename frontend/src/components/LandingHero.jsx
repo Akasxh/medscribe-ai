@@ -41,7 +41,7 @@ const fadeUp = {
   }),
 }
 
-export default function LandingHero({ onStart }) {
+export default function LandingHero({ onStart, supported = true }) {
   return (
     <section className="relative overflow-hidden">
       {/* Background gradient */}
@@ -142,13 +142,23 @@ export default function LandingHero({ onStart }) {
         >
           <button
             onClick={onStart}
-            className="group inline-flex items-center gap-2.5 px-7 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium rounded-xl shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+            disabled={!supported}
+            className={`group inline-flex items-center gap-2.5 px-7 py-3 font-medium rounded-xl shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${
+              supported
+                ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-blue-600/20 hover:shadow-blue-600/30'
+                : 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed shadow-none'
+            }`}
             aria-label="Start a new consultation"
           >
             <Mic className="w-5 h-5" />
-            Start Consultation
+            {supported ? 'Start Consultation' : 'Speech Not Supported'}
             <ChevronRight className="w-4 h-4 opacity-60 group-hover:translate-x-0.5 transition-transform" />
           </button>
+          {!supported && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Your browser does not support the Web Speech API. Try Chrome or Edge.
+            </p>
+          )}
           <p className="text-xs text-slate-400 dark:text-slate-500">
             or try a demo scenario below
           </p>

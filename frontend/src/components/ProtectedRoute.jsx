@@ -17,7 +17,7 @@ export default function ProtectedRoute({ role, children }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -30,11 +30,11 @@ export default function ProtectedRoute({ role, children }) {
     effectiveUser = supabaseUser
     effectiveRole = supabaseRole
   } else {
-    // Fallback to localStorage
+    // Fallback to localStorage — never grant admin role without Supabase auth
     const localUser = loadLocalUser()
     if (localUser) {
       effectiveUser = localUser
-      effectiveRole = localUser.role
+      effectiveRole = 'doctor'
     }
   }
 

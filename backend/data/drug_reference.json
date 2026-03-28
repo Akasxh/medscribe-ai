@@ -9,7 +9,7 @@
   "Shelcal": {"generic": "Calcium + Vitamin D3", "category": "Supplement", "dosage": "500mg+250IU", "use": "calcium supplement", "rxnorm_cui": "11253"},
   "Glycomet": {"generic": "Metformin", "category": "Antidiabetic", "dosage": "500mg", "use": "type 2 diabetes", "rxnorm_cui": "6809", "alternatives": ["Glucophage", "Obimet", "Walaphage"]},
   "Cetrizine": {"generic": "Cetirizine", "category": "Antihistamine", "dosage": "10mg", "use": "allergy", "rxnorm_cui": "20610", "alternatives": ["Okacet", "Zyrtec", "Alerid"]},
-  "Allegra": {"generic": "Fexofenadine", "category": "Antihistamine", "dosage": "120mg", "use": "allergy", "rxnorm_cui": "26225"},
+  "Allegra": {"generic": "Fexofenadine", "category": "Antihistamine", "dosage": "120mg", "use": "allergy", "rxnorm_cui": "24995"},
   "Augmentin": {"generic": "Amoxicillin + Clavulanic Acid", "category": "Antibiotic", "dosage": "625mg", "use": "infection", "rxnorm_cui": "7984", "alternatives": ["Amoxyclav", "Clavam", "Moxikind-CV"]},
   "Zifi": {"generic": "Cefixime", "category": "Antibiotic", "dosage": "200mg", "use": "infection", "rxnorm_cui": "25037"},
   "ORS": {"generic": "Oral Rehydration Salts", "category": "Rehydration", "dosage": "21.8g/L", "use": "dehydration", "rxnorm_cui": null},

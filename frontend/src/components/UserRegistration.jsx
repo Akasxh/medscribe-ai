@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Activity, User, Building2, Hash, ShieldCheck, Mail, Lock, ArrowLeftRight } from 'lucide-react'
+import { Activity, User, Building2, Hash, Mail, Lock, ArrowLeftRight } from 'lucide-react'
 import { isSupabaseConfigured } from '../lib/supabase'
 import useSupabaseAuth from '../hooks/useSupabaseAuth'
 
@@ -10,7 +10,7 @@ export default function UserRegistration({ onRegister }) {
   const [doctorId, setDoctorId] = useState('')
   const [hospital, setHospital] = useState('')
   const [patientName, setPatientName] = useState('')
-  const [role, setRole] = useState('doctor')
+  const ADMIN_EMAIL = 'jhmedvani2026@gmail.com'
   const [error, setError] = useState('')
   const [isSignIn, setIsSignIn] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -32,10 +32,11 @@ export default function UserRegistration({ onRegister }) {
         const data = await signIn({ email: email.trim(), password })
         const user = data.user
         // Also store in localStorage for ProtectedRoute compat
+        const derivedRole = user.email?.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'doctor'
         const localUser = {
           name: user.user_metadata?.full_name || email.split('@')[0],
           email: user.email,
-          role: user.user_metadata?.role || 'doctor',
+          role: derivedRole,
           hospital: user.user_metadata?.hospital || null,
           doctorId: null,
           patientName: null,
@@ -72,11 +73,12 @@ export default function UserRegistration({ onRegister }) {
 
       setSubmitting(true)
       try {
+        const signUpRole = email.trim().toLowerCase() === ADMIN_EMAIL ? 'admin' : 'doctor'
         const data = await signUp({
           email: email.trim(),
           password,
           fullName: trimmed,
-          role,
+          role: signUpRole,
           hospital: hospital.trim() || '',
         })
 
@@ -88,7 +90,7 @@ export default function UserRegistration({ onRegister }) {
           doctorId: doctorId.trim() || null,
           hospital: hospital.trim() || null,
           patientName: patientName.trim() || null,
-          role,
+          role: signUpRole,
           registeredAt: new Date().toISOString(),
           supabaseId: user?.id || null,
         }
@@ -103,12 +105,13 @@ export default function UserRegistration({ onRegister }) {
     }
 
     // --- localStorage-only fallback (no Supabase) ---
+    // Without Supabase, always assign 'doctor' role (admin requires Supabase auth)
     const user = {
       name: trimmed,
       doctorId: doctorId.trim() || null,
       hospital: hospital.trim() || null,
       patientName: patientName.trim() || null,
-      role,
+      role: 'doctor',
       registeredAt: new Date().toISOString(),
     }
     localStorage.setItem('medscribe_user', JSON.stringify(user))
@@ -263,38 +266,6 @@ export default function UserRegistration({ onRegister }) {
                   </div>
                 </div>
 
-                {/* Role selector */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
-                    Login as
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRole('doctor')}
-                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium border transition-all ${
-                        role === 'doctor'
-                          ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400'
-                          : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
-                      }`}
-                    >
-                      <User className="w-4 h-4" />
-                      Doctor
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole('admin')}
-                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium border transition-all ${
-                        role === 'admin'
-                          ? 'bg-violet-50 dark:bg-violet-950/30 border-violet-300 dark:border-violet-700 text-violet-700 dark:text-violet-400'
-                          : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
-                      }`}
-                    >
-                      <ShieldCheck className="w-4 h-4" />
-                      Admin
-                    </button>
-                  </div>
-                </div>
               </>
             )}
 

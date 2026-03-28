@@ -29,6 +29,11 @@ export default function AnalyticsPanel({ sessions }) {
     })
     return Object.entries(map)
       .map(([day, count]) => ({ day, count }))
+      .sort((a, b) => {
+        // Parse "Mon DD" back to comparable dates
+        const parseDay = (d) => new Date(d + ', ' + new Date().getFullYear())
+        return parseDay(a.day) - parseDay(b.day)
+      })
       .slice(-7) // last 7 days
   }, [sessions])
 
@@ -80,11 +85,12 @@ export default function AnalyticsPanel({ sessions }) {
               <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
               <Tooltip
                 contentStyle={{
-                  background: 'var(--tw-bg-opacity, #fff)',
+                  background: '#ffffff',
                   border: '1px solid #e2e8f0',
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
+                wrapperClassName="[.dark_&]:!bg-slate-800 [.dark_&]:!border-slate-700"
               />
               <Bar dataKey="count" fill="#2563EB" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -102,10 +108,12 @@ export default function AnalyticsPanel({ sessions }) {
               <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={100} />
               <Tooltip
                 contentStyle={{
+                  background: '#ffffff',
                   border: '1px solid #e2e8f0',
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
+                wrapperClassName="[.dark_&]:!bg-slate-800 [.dark_&]:!border-slate-700"
               />
               <Bar dataKey="count" fill="#10B981" radius={[0, 4, 4, 0]} />
             </BarChart>
@@ -136,10 +144,12 @@ export default function AnalyticsPanel({ sessions }) {
               </Pie>
               <Tooltip
                 contentStyle={{
+                  background: '#ffffff',
                   border: '1px solid #e2e8f0',
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
+                wrapperClassName="[.dark_&]:!bg-slate-800 [.dark_&]:!border-slate-700"
               />
               <Legend wrapperStyle={{ fontSize: '11px' }} />
             </PieChart>

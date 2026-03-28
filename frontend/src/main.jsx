@@ -11,7 +11,7 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'))
 function LazyFallback() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-      <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 }
@@ -27,6 +27,13 @@ if ('serviceWorker' in navigator) {
       })
       .catch((err) => console.warn('SW registration failed:', err))
   })
+}
+
+function LoginPage() {
+  return <UserRegistration onRegister={(user) => {
+    // After registration, redirect based on role
+    window.location.href = user.role === 'admin' ? '/admin' : '/'
+  }} />
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -56,10 +63,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </BrowserRouter>
   </React.StrictMode>
 )
-
-function LoginPage() {
-  return <UserRegistration onRegister={(user) => {
-    // After registration, redirect based on role
-    window.location.href = user.role === 'admin' ? '/admin' : '/'
-  }} />
-}

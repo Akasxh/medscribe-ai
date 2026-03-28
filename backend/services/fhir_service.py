@@ -658,8 +658,20 @@ class FHIRBundleBuilder:
         }
 
         if duration:
+            # Parse numeric value and unit from duration string (e.g. "5 days" → 5, "d")
+            import re
+            dur_match = re.match(r"(\d+)\s*(\w+)?", str(duration))
+            dur_val = int(dur_match.group(1)) if dur_match else 1
+            dur_unit_raw = (dur_match.group(2) or "d") if dur_match else "d"
+            ucum_map = {"day": "d", "days": "d", "week": "wk", "weeks": "wk", "month": "mo", "months": "mo"}
+            dur_unit = ucum_map.get(dur_unit_raw.lower(), "d")
             resource["dosageInstruction"][0]["timing"] = {
-                "repeat": {"boundsDuration": {"value": duration}}
+                "repeat": {"boundsDuration": {
+                    "value": dur_val,
+                    "unit": dur_unit,
+                    "system": "http://unitsofmeasure.org",
+                    "code": dur_unit,
+                }}
             }
 
         return resource

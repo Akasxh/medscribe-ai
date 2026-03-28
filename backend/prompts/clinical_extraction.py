@@ -336,3 +336,6 @@ Additionally extract these orthopedics-specific fields in the JSON output:
   }
 """,
 }
+
+# Alias: endocrinology uses the same addendum as diabetology
+SPECIALTY_ADDENDUMS["endocrinology"] = SPECIALTY_ADDENDUMS["diabetology"]

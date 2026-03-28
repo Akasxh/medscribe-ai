@@ -5,6 +5,7 @@ import KPICards from '../components/admin/KPICards'
 import PatientList from '../components/admin/PatientList'
 import ConsultationDetail from '../components/admin/ConsultationDetail'
 import AnalyticsPanel from '../components/admin/AnalyticsPanel'
+import useSupabaseAuth from '../hooks/useSupabaseAuth'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -20,6 +21,7 @@ function loadUser() {
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const user = loadUser()
+  const { signOut } = useSupabaseAuth()
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -44,10 +46,11 @@ export default function AdminDashboard() {
     fetchSessions()
   }, [fetchSessions])
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    await signOut().catch(() => {})
     localStorage.removeItem('medscribe_user')
     navigate('/login')
-  }, [navigate])
+  }, [navigate, signOut])
 
   const selectedSession = sessions.find(s => s.id === selectedId) || null
 

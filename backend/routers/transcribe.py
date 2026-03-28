@@ -3,6 +3,7 @@ import hashlib
 import html
 import json
 import logging
+import re
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -31,6 +32,11 @@ VALID_SPECIALTIES = {
     "gastroenterology", "orthopedics", "neurology", "pediatrics",
     "dermatology", "psychiatry",
 }
+
+UUID_PATTERN = re.compile(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    re.IGNORECASE,
+)
 
 # Minimum transcript length worth sending to Gemini at all
 MIN_PROCESSABLE_LENGTH = 20
@@ -79,6 +85,10 @@ def _get_gemini_service() -> GeminiExtractionService:
 
 @router.websocket("/ws/transcribe/{session_id}")
 async def websocket_transcribe(websocket: WebSocket, session_id: str):
+    if not UUID_PATTERN.match(session_id):
+        await websocket.close(code=4000, reason="Invalid session ID format")
+        return
+
     await websocket.accept()
     await asyncio.to_thread(_cleanup_sessions)
     logger.info("WebSocket connected for session %s", session_id)
@@ -96,6 +106,9 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
     try:
         while True:
             raw = await websocket.receive_text()
+            if len(raw) > 65536:
+                await _send_error(websocket, "Message too large")
+                continue
             try:
                 message = json.loads(raw)
             except json.JSONDecodeError:
@@ -170,6 +183,9 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
 
             elif msg_type == "abha_id":
                 abha_id = message.get("abha_id")
+                if abha_id and not re.match(r'^\d{2}-\d{4}-\d{4}-\d{4}$', str(abha_id)):
+                    await _send_error(websocket, "Invalid ABHA ID format")
+                    continue
                 await websocket.send_json({"type": "abha_id_ack", "abha_id": abha_id})
 
             elif msg_type == "process":
@@ -438,7 +454,10 @@ async def _process_and_send(
                             for item in val if item is not None
                         ]
                     elif val is None and key not in ("follow_up",):
-                        clinical_data[key] = "" if isinstance(val, str) or val is None else val
+                        if key in ("vitals", "patient_info"):
+                            clinical_data[key] = {}
+                        else:
+                            clinical_data[key] = ""
                 session.clinical_note = ClinicalNote(**clinical_data)
             except Exception as e2:
                 logger.error("Fallback ClinicalNote creation also failed: %s", e2)

@@ -71,12 +71,12 @@ export default function DrugAlternatives({ drugName, onClose }) {
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn"
       role="dialog"
       aria-modal="true"
       aria-label={`Drug alternatives for ${drugName}`}
     >
-      <div className="bg-white dark:bg-slate-800 w-full sm:w-[520px] sm:max-w-[90vw] max-h-[85vh] sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300">
+      <div className="bg-white dark:bg-slate-800 w-full sm:w-[520px] sm:max-w-[90vw] max-h-[85vh] sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/60">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -96,7 +96,7 @@ export default function DrugAlternatives({ drugName, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-700 transition-colors"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
