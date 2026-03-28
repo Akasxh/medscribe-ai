@@ -11,7 +11,7 @@ COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
 # Cache buster — change this value to force a fresh frontend build
-ARG CACHEBUST=2
+ARG CACHEBUST=3
 RUN npm run build
 
 # Stage 2: Python backend + serve frontend
