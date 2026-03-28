@@ -7,7 +7,7 @@ import ConsultationDetail from '../components/admin/ConsultationDetail'
 import AnalyticsPanel from '../components/admin/AnalyticsPanel'
 import useSupabaseAuth from '../hooks/useSupabaseAuth'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 function loadUser() {
   try {

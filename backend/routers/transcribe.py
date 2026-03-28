@@ -56,8 +56,6 @@ def _segment_hash(text: str) -> str:
 
 def _cleanup_sessions() -> None:
     """Remove expired sessions to prevent unbounded memory growth."""
-    if len(sessions_store) <= MAX_SESSIONS:
-        return
     now = datetime.now()
     expired = [
         sid for sid, session in sessions_store.items()

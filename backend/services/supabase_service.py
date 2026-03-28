@@ -7,6 +7,7 @@ when SUPABASE_SERVICE_ROLE_KEY is not configured.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from functools import lru_cache
@@ -102,9 +103,11 @@ async def persist_session(
         if doctor_id:
             consultation_row["doctor_id"] = doctor_id
 
-        client.table("consultations").upsert(
-            consultation_row, on_conflict="id"
-        ).execute()
+        await asyncio.to_thread(
+            lambda: client.table("consultations").upsert(
+                consultation_row, on_conflict="id"
+            ).execute()
+        )
 
         # 2. Upsert clinical_notes
         if clinical_data:
@@ -118,9 +121,11 @@ async def persist_session(
             if doctor_id:
                 note_row["doctor_id"] = doctor_id
 
-            client.table("clinical_notes").upsert(
-                note_row, on_conflict="consultation_id"
-            ).execute()
+            await asyncio.to_thread(
+                lambda: client.table("clinical_notes").upsert(
+                    note_row, on_conflict="consultation_id"
+                ).execute()
+            )
 
         # 3. Upsert fhir_bundles
         if fhir_bundle:
@@ -134,9 +139,11 @@ async def persist_session(
             if doctor_id:
                 bundle_row["doctor_id"] = doctor_id
 
-            client.table("fhir_bundles").upsert(
-                bundle_row, on_conflict="consultation_id"
-            ).execute()
+            await asyncio.to_thread(
+                lambda: client.table("fhir_bundles").upsert(
+                    bundle_row, on_conflict="consultation_id"
+                ).execute()
+            )
 
         # 4. Upsert prescriptions (medications + diagnosis + follow_up)
         if clinical_data:
@@ -161,9 +168,11 @@ async def persist_session(
             if doctor_id:
                 rx_row["doctor_id"] = doctor_id
 
-            client.table("prescriptions").upsert(
-                rx_row, on_conflict="consultation_id"
-            ).execute()
+            await asyncio.to_thread(
+                lambda: client.table("prescriptions").upsert(
+                    rx_row, on_conflict="consultation_id"
+                ).execute()
+            )
 
         logger.info("Session %s persisted to Supabase", session_id)
         return True

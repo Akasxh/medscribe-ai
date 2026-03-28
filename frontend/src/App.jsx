@@ -19,6 +19,7 @@ import useAudioRecorder from './hooks/useAudioRecorder'
 import LanguageSelector from './components/LanguageSelector'
 import ToastContainer from './components/ToastNotification'
 import LandingHero from './components/LandingHero'
+import useSupabaseAuth from './hooks/useSupabaseAuth'
 import { FileJson, ClipboardList, Shield, RotateCcw } from 'lucide-react'
 
 // Lazy-loaded components (not needed on initial render)
@@ -80,10 +81,12 @@ export default function App() {
     setUser(newUser)
   }, [])
 
-  const handleLogout = useCallback(() => {
+  const { signOut } = useSupabaseAuth()
+  const handleLogout = useCallback(async () => {
+    await signOut().catch(() => {})
     localStorage.removeItem('medscribe_user')
     setUser(null)
-  }, [])
+  }, [signOut])
 
   const ws = useWebSocket(sessionId)
 
@@ -390,7 +393,7 @@ export default function App() {
                       <FHIRQualityBadge quality={ws.fhirQuality} />
                       <div className="mt-2">
                         <Suspense fallback={<LazyFallback />}>
-                          <FHIRViewer bundle={ws.fhirBundle} />
+                          <FHIRViewer bundle={ws.fhirBundle} quality={ws.fhirQuality} />
                         </Suspense>
                       </div>
                     </>
