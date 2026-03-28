@@ -88,10 +88,6 @@ async def persist_session(
     Designed to be called as ``asyncio.create_task(persist_session(...))``.
     Returns ``True`` on success, ``False`` on skip/failure.
     """
-    if not doctor_id:
-        logger.warning("persist_session: no doctor_id, skipping Supabase write")
-        return False
-
     client = get_service_client()
     if client is None:
         return False
@@ -148,7 +144,7 @@ async def persist_session(
                 "risk_factors": _to_plain_list(clinical_data.get("risk_factors")),
                 "recommended_tests": _to_plain_list(clinical_data.get("recommended_tests")),
                 "follow_up": clinical_data.get("follow_up"),
-                "clinical_notes_text": clinical_data.get("clinical_notes_text"),
+                "clinical_notes_text": clinical_data.get("clinical_notes"),
             }
             if doctor_id:
                 note_row["doctor_id"] = doctor_id

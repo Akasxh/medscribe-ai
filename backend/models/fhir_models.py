@@ -12,7 +12,7 @@ FHIR_R4_BASE = "http://hl7.org/fhir/StructureDefinition"
 ABDM_PROFILE_BASE = "https://nrces.in/ndhm/fhir/r4/StructureDefinition"
 
 # Coding systems
-ICD10_SYSTEM = "http://hl7.org/fhir/sid/icd-10"  # WHO ICD-10, NOT icd-10-cm
+ICD10_SYSTEM = "http://hl7.org/fhir/sid/icd-10-cm"  # ICD-10-CM (codes like R50.9, E11.9, I10)
 SNOMED_SYSTEM = "http://snomed.info/sct"
 RXNORM_SYSTEM = "http://www.nlm.nih.gov/research/umls/rxnorm"
 LOINC_SYSTEM = "http://loinc.org"

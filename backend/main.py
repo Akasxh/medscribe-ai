@@ -40,7 +40,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: blob:; "
-            "connect-src 'self' ws: wss:; "
+            "connect-src 'self' ws: wss: https://*.supabase.co wss://*.supabase.co; "
             "object-src 'none'; "
             "base-uri 'self'"
         )

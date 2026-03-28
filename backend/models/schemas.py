@@ -136,6 +136,7 @@ class Session(BaseModel):
     cds_alerts: list = Field(default_factory=list)
     fhir_quality: Optional[dict] = None
     fhir_bundle: Optional[dict] = None
+    completed_at: Optional[datetime] = None
     # SHA-256 hashes of normalised transcript segments already appended.
     # Used to deduplicate re-sent finals caused by Web Speech API restarts or
     # WebSocket reconnects.  Not persisted to disk; cleared only on new session.

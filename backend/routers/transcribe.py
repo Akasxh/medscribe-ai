@@ -233,6 +233,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                             len(full_text),
                         )
 
+                session.completed_at = datetime.now()
                 session.status = SessionStatus.COMPLETED
                 sessions_store[session_id] = session
 
@@ -537,14 +538,13 @@ async def _process_and_send(
             }
         )
 
-        # Send CDS alerts to frontend
-        if cds_alerts:
-            await websocket.send_json(
-                {
-                    "type": "cds_alerts",
-                    "data": cds_alerts,
-                }
-            )
+        # Send CDS alerts to frontend (always send, even if empty, to clear stale alerts)
+        await websocket.send_json(
+            {
+                "type": "cds_alerts",
+                "data": cds_alerts,
+            }
+        )
 
         await websocket.send_json(
             {"type": "processing", "status": "completed"}

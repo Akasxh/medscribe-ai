@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo, lazy, Suspense } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect, lazy, Suspense } from 'react'
 import HealthBanner from './components/HealthBanner'
 import Header from './components/Header'
 import RecordButton from './components/RecordButton'
@@ -39,6 +39,7 @@ function LazyFallback() {
   )
 }
 
+const AUTOSAVE_KEY = 'medscribe_autosave'
 const SESSION_STORAGE_KEY = 'medscribe_session_id'
 
 function generateSessionId() {
@@ -76,6 +77,47 @@ export default function App() {
   const hasStartedRef = useRef(false)
   // Set-based dedup for all final transcripts (live + demo) — catches non-consecutive duplicates
   const seenFinalsRef = useRef(new Set())
+  const [autosaveRecovery, setAutosaveRecovery] = useState(null)
+
+  // Autosave transcript to localStorage
+  useEffect(() => {
+    if (transcriptLines.length > 0) {
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ sessionId, transcriptLines, timestamp: Date.now() }))
+    }
+  }, [transcriptLines, sessionId])
+
+  // Check for autosave recovery on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(AUTOSAVE_KEY)
+      if (raw) {
+        const saved = JSON.parse(raw)
+        // Only show recovery if less than 24 hours old
+        if (saved.transcriptLines?.length > 0 && Date.now() - saved.timestamp < 86400000) {
+          setAutosaveRecovery(saved)
+        } else {
+          localStorage.removeItem(AUTOSAVE_KEY)
+        }
+      }
+    } catch {
+      localStorage.removeItem(AUTOSAVE_KEY)
+    }
+  }, [])
+
+  const handleRecoverAutosave = useCallback(() => {
+    if (!autosaveRecovery) return
+    setTranscriptLines(autosaveRecovery.transcriptLines)
+    setSessionId(autosaveRecovery.sessionId)
+    sessionStorage.setItem(SESSION_STORAGE_KEY, autosaveRecovery.sessionId)
+    hasStartedRef.current = true
+    setSessionActive(true)
+    setAutosaveRecovery(null)
+  }, [autosaveRecovery])
+
+  const handleDismissAutosave = useCallback(() => {
+    localStorage.removeItem(AUTOSAVE_KEY)
+    setAutosaveRecovery(null)
+  }, [])
 
   const handleRegister = useCallback((newUser) => {
     setUser(newUser)
@@ -103,6 +145,8 @@ export default function App() {
     hasStartedRef.current = false
     setSessionActive(false)
     seenFinalsRef.current = new Set()
+    localStorage.removeItem(AUTOSAVE_KEY)
+    setAutosaveRecovery(null)
   }, [ws])
 
   // Safety score hook
@@ -193,6 +237,21 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
       <HealthBanner />
+      {autosaveRecovery && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 py-2.5 flex items-center justify-between gap-3">
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            Unsaved transcript found ({autosaveRecovery.transcriptLines.length} segments).
+          </p>
+          <div className="flex gap-2 shrink-0">
+            <button onClick={handleRecoverAutosave} className="px-3 py-1 text-xs font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors">
+              Restore
+            </button>
+            <button onClick={handleDismissAutosave} className="px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       <ToastContainer />
       <Header user={user} onLogout={handleLogout} />
 

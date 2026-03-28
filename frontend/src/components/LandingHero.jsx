@@ -29,7 +29,7 @@ const trustIndicators = [
   { label: '6 Medical Specialties', icon: Stethoscope },
   { label: '15+ Drug Interaction Rules', icon: Shield },
   { label: 'ICD-10 + SNOMED + LOINC', icon: Database },
-  { label: 'AES-256 Encrypted', icon: Shield },
+  { label: 'Fernet Encrypted (AES-128)', icon: Shield },
 ]
 
 const fadeUp = {
