@@ -79,7 +79,7 @@ def _get_gemini_service() -> GeminiExtractionService:
 @router.websocket("/ws/transcribe/{session_id}")
 async def websocket_transcribe(websocket: WebSocket, session_id: str):
     await websocket.accept()
-    _cleanup_sessions()
+    await asyncio.to_thread(_cleanup_sessions)
     logger.info("WebSocket connected for session %s", session_id)
 
     # Get or create session
@@ -441,6 +441,9 @@ async def _process_and_send(
                 session.clinical_note = ClinicalNote(**clinical_data)
             except Exception as e2:
                 logger.error("Fallback ClinicalNote creation also failed: %s", e2)
+                await _send_error(websocket, "Failed to parse clinical data.")
+                await websocket.send_json({"type": "processing", "status": "completed"})
+                return
 
         # Run CDS checks and terminology validation concurrently (both
         # operate on clinical_data independently).  CDS results feed into

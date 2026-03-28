@@ -118,6 +118,9 @@ export default function DemoMode({ onTranscript, isRecording }) {
   const [totalSegments, setTotalSegments] = useState(0)
   const [collapsed, setCollapsed] = useState(true)
   const timeoutIdsRef = useRef([])
+  // Stable ref so long-running timeouts always call the latest callback
+  const onTranscriptRef = useRef(onTranscript)
+  useEffect(() => { onTranscriptRef.current = onTranscript }, [onTranscript])
 
   const clearAllTimeouts = useCallback(() => {
     timeoutIdsRef.current.forEach(clearTimeout)
@@ -143,9 +146,9 @@ export default function DemoMode({ onTranscript, isRecording }) {
     demo.segments.forEach((seg, i) => {
       const outerTimeout = setTimeout(() => {
         setCurrentSegment(i + 1)
-        onTranscript(seg.text, false) // interim first
+        onTranscriptRef.current(seg.text, false) // interim first
         const innerTimeout = setTimeout(() => {
-          onTranscript(seg.text, true) // then final
+          onTranscriptRef.current(seg.text, true) // then final
           if (i === demo.segments.length - 1) {
             setPlaying(false)
             setCurrentDemo(null)

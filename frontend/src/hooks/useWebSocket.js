@@ -89,14 +89,14 @@ export default function useWebSocket(sessionId) {
     ws.onclose = (event) => {
       setConnected(false)
       // Auto-reconnect on unclean close if under max attempts
-      if (!intentionalCloseRef.current && !event.wasClean && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 10000)
+      if (!intentionalCloseRef.current && !event.wasClean) {
         reconnectAttemptsRef.current += 1
-        reconnectTimerRef.current = setTimeout(() => connect(), delay)
-      }
-
-      if (!intentionalCloseRef.current && reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
-        setError('Connection lost. Please refresh the page.')
+        if (reconnectAttemptsRef.current <= MAX_RECONNECT_ATTEMPTS) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current - 1), 10000)
+          reconnectTimerRef.current = setTimeout(() => connect(), delay)
+        } else {
+          setError('Connection lost. Please refresh the page.')
+        }
       }
     }
 
