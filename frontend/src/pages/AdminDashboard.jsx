@@ -31,7 +31,12 @@ export default function AdminDashboard() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API_BASE}/api/sessions`)
+      // Try Supabase-backed admin endpoint first
+      let res = await fetch(`${API_BASE}/api/admin/consultations`)
+      if (!res.ok) {
+        // Fallback to in-memory sessions endpoint
+        res = await fetch(`${API_BASE}/api/sessions`)
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setSessions(data)

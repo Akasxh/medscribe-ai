@@ -1,9 +1,18 @@
-from fastapi import APIRouter, HTTPException
+from __future__ import annotations
+
+import asyncio
+import logging
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+
 from models.schemas import Session, SessionStatus
 from routers.transcribe import sessions_store
 from services.learning_service import store_correction, get_correction_stats
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -71,3 +80,71 @@ async def delete_session(session_id: str):
         del sessions_store[session_id]
         return {"deleted": True, "session_id": session_id}
     raise HTTPException(status_code=404, detail="Session not found")
+
+
+# ---------------------------------------------------------------------------
+# Admin + Auth routes (separate router so prefix doesn't collide)
+# ---------------------------------------------------------------------------
+
+admin_router = APIRouter(prefix="/api", tags=["admin"])
+
+
+@admin_router.get("/admin/consultations")
+async def list_all_consultations() -> list[dict[str, Any]]:
+    """Admin endpoint: fetch all consultations from Supabase with joined data."""
+    from services.supabase_service import get_service_client
+
+    client = get_service_client()
+    if not client:
+        # Fallback to in-memory sessions
+        return [
+            s.model_dump()
+            for s in sorted(
+                sessions_store.values(),
+                key=lambda x: x.created_at,
+                reverse=True,
+            )
+        ]
+
+    try:
+        result = await asyncio.to_thread(
+            lambda: client.table("consultations")
+            .select("*, clinical_notes(*), fhir_bundles(*)")
+            .order("created_at", desc=True)
+            .limit(100)
+            .execute()
+        )
+        return result.data  # type: ignore[return-value]
+    except Exception as exc:
+        logger.error("Failed to fetch consultations from Supabase: %s", exc)
+        # Fallback to in-memory
+        return [
+            s.model_dump()
+            for s in sorted(
+                sessions_store.values(),
+                key=lambda x: x.created_at,
+                reverse=True,
+            )
+        ]
+
+
+@admin_router.get("/auth/check-admin")
+async def check_admin(email: str = Query(..., description="Email to check")) -> dict[str, bool]:
+    """Check whether the given email belongs to an admin user."""
+    from services.supabase_service import get_service_client
+
+    client = get_service_client()
+    if not client:
+        return {"is_admin": False}
+
+    try:
+        result = await asyncio.to_thread(
+            lambda: client.table("admin_users")
+            .select("email")
+            .eq("email", email.strip().lower())
+            .execute()
+        )
+        return {"is_admin": len(result.data) > 0}
+    except Exception as exc:
+        logger.error("Failed to check admin status: %s", exc)
+        return {"is_admin": False}

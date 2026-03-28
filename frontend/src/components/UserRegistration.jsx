@@ -3,13 +3,25 @@ import { Activity, User, Building2, Hash, Mail, Lock, ArrowLeftRight } from 'luc
 import { isSupabaseConfigured } from '../lib/supabase'
 import useSupabaseAuth from '../hooks/useSupabaseAuth'
 
+const API_BASE = import.meta.env.VITE_API_URL || ''
+
+async function checkAdminRole(userEmail) {
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/check-admin?email=${encodeURIComponent(userEmail)}`)
+    if (!res.ok) return false
+    const data = await res.json()
+    return data.is_admin === true
+  } catch {
+    return false
+  }
+}
+
 export default function UserRegistration({ onRegister }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [doctorId, setDoctorId] = useState('')
   const [hospital, setHospital] = useState('')
-  const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || ''
   const [error, setError] = useState('')
   const [isSignIn, setIsSignIn] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -30,12 +42,12 @@ export default function UserRegistration({ onRegister }) {
       try {
         const data = await signIn({ email: email.trim(), password })
         const user = data.user
-        // Also store in localStorage for ProtectedRoute compat
-        const derivedRole = user.email?.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'doctor'
+        // Check admin status from DB via backend
+        const isAdmin = await checkAdminRole(user.email || email.trim())
         const localUser = {
           name: user.user_metadata?.full_name || email.split('@')[0],
           email: user.email,
-          role: derivedRole,
+          role: isAdmin ? 'admin' : 'doctor',
           hospital: user.user_metadata?.hospital || null,
           doctorId: null,
           patientName: null,
@@ -72,7 +84,9 @@ export default function UserRegistration({ onRegister }) {
 
       setSubmitting(true)
       try {
-        const signUpRole = email.trim().toLowerCase() === ADMIN_EMAIL ? 'admin' : 'doctor'
+        // Check admin status from DB before sign-up
+        const isAdmin = await checkAdminRole(email.trim())
+        const signUpRole = isAdmin ? 'admin' : 'doctor'
         const data = await signUp({
           email: email.trim(),
           password,
@@ -82,7 +96,6 @@ export default function UserRegistration({ onRegister }) {
         })
 
         const user = data.user
-        // Store in localStorage for ProtectedRoute compat
         const localUser = {
           name: trimmed,
           email: email.trim(),

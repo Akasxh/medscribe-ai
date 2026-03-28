@@ -21,7 +21,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 
 from routers.transcribe import router as transcribe_router
-from routers.sessions import router as sessions_router
+from routers.sessions import router as sessions_router, admin_router
 from routers.drugs import router as drugs_router
 
 
@@ -84,6 +84,7 @@ app.add_middleware(
 # Include routers
 app.include_router(transcribe_router)
 app.include_router(sessions_router)
+app.include_router(admin_router)
 app.include_router(drugs_router)
 
 

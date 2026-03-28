@@ -92,6 +92,24 @@ async def persist_session(
     if client is None:
         return False
 
+    # Helper: serialise Pydantic models to plain dicts/lists
+    def _to_plain(item: Any) -> Any:
+        if hasattr(item, "model_dump"):
+            return item.model_dump()
+        if hasattr(item, "dict"):
+            return item.dict()
+        return item
+
+    def _to_plain_list(items: Any) -> list:
+        if not items:
+            return []
+        return [_to_plain(i) for i in items]
+
+    def _to_plain_dict(item: Any) -> dict:
+        if not item:
+            return {}
+        return _to_plain(item) if not isinstance(item, dict) else item
+
     try:
         # 1. Upsert consultation
         consultation_row: dict[str, Any] = {
@@ -109,15 +127,25 @@ async def persist_session(
             ).execute()
         )
 
-        # 2. Upsert clinical_notes
+        # 2. Upsert clinical_notes — spread into individual columns
         if clinical_data:
             note_row: dict[str, Any] = {
                 "consultation_id": session_id,
-                "note_data": clinical_data,
+                "patient_info": _to_plain_dict(clinical_data.get("patient_info")),
+                "chief_complaint": clinical_data.get("chief_complaint"),
+                "history_of_present_illness": clinical_data.get("history_of_present_illness"),
+                "symptoms": _to_plain_list(clinical_data.get("symptoms")),
+                "vitals": _to_plain_dict(clinical_data.get("vitals")),
+                "diagnosis": _to_plain_list(clinical_data.get("diagnosis")),
+                "medications": _to_plain_list(clinical_data.get("medications")),
+                "observations": _to_plain_list(clinical_data.get("observations")),
+                "allergies": _to_plain_list(clinical_data.get("allergies")),
+                "differential_diagnosis": _to_plain_list(clinical_data.get("differential_diagnosis")),
+                "risk_factors": _to_plain_list(clinical_data.get("risk_factors")),
+                "recommended_tests": _to_plain_list(clinical_data.get("recommended_tests")),
+                "follow_up": clinical_data.get("follow_up"),
+                "clinical_notes_text": clinical_data.get("clinical_notes_text"),
             }
-            if fhir_quality:
-                note_row["fhir_score"] = fhir_quality.get("score")
-                note_row["fhir_grade"] = fhir_quality.get("grade")
             if doctor_id:
                 note_row["doctor_id"] = doctor_id
 
@@ -127,11 +155,11 @@ async def persist_session(
                 ).execute()
             )
 
-        # 3. Upsert fhir_bundles
+        # 3. Upsert fhir_bundles (quality_score and quality_grade live here)
         if fhir_bundle:
             bundle_row: dict[str, Any] = {
                 "consultation_id": session_id,
-                "bundle": fhir_bundle,
+                "bundle": _to_plain(fhir_bundle) if not isinstance(fhir_bundle, dict) else fhir_bundle,
             }
             if fhir_quality:
                 bundle_row["quality_score"] = fhir_quality.get("score")
@@ -145,34 +173,36 @@ async def persist_session(
                 ).execute()
             )
 
-        # 4. Upsert prescriptions (medications + diagnosis + follow_up)
+        # 4. Insert prescriptions — one row per medication
         if clinical_data:
             meds = clinical_data.get("medications", [])
-            dx = clinical_data.get("diagnosis", [])
-            follow_up = clinical_data.get("follow_up")
-
-            # Serialise Pydantic models if needed
-            def _to_dict(item: Any) -> Any:
-                if hasattr(item, "model_dump"):
-                    return item.model_dump()
-                if hasattr(item, "dict"):
-                    return item.dict()
-                return item
-
-            rx_row: dict[str, Any] = {
-                "consultation_id": session_id,
-                "medications": [_to_dict(m) for m in meds] if meds else [],
-                "diagnosis": [_to_dict(d) for d in dx] if dx else [],
-                "follow_up": follow_up or "",
-            }
-            if doctor_id:
-                rx_row["doctor_id"] = doctor_id
-
-            await asyncio.to_thread(
-                lambda: client.table("prescriptions").upsert(
-                    rx_row, on_conflict="consultation_id"
-                ).execute()
-            )
+            if meds:
+                # Delete existing prescriptions for this consultation first
+                await asyncio.to_thread(
+                    lambda: client.table("prescriptions")
+                    .delete()
+                    .eq("consultation_id", session_id)
+                    .execute()
+                )
+                for med_raw in meds:
+                    med = _to_plain(med_raw) if not isinstance(med_raw, dict) else med_raw
+                    rx_row: dict[str, Any] = {
+                        "consultation_id": session_id,
+                        "medication_name": med.get("name", "") or med.get("medication_name", ""),
+                        "generic_name": med.get("generic_name", ""),
+                        "dosage": med.get("dosage", ""),
+                        "frequency": med.get("frequency", ""),
+                        "duration": med.get("duration", ""),
+                        "route": med.get("route", "oral"),
+                        "rxnorm_code": med.get("rxnorm_code", ""),
+                    }
+                    if doctor_id:
+                        rx_row["doctor_id"] = doctor_id
+                    await asyncio.to_thread(
+                        lambda row=rx_row: client.table("prescriptions")
+                        .insert(row)
+                        .execute()
+                    )
 
         logger.info("Session %s persisted to Supabase", session_id)
         return True
