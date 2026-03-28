@@ -6,15 +6,16 @@ import useSupabaseAuth from '../hooks/useSupabaseAuth'
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 async function checkAdminRole(userEmail, userPassword = '') {
-  try {
-    const params = new URLSearchParams({ email: userEmail, password: userPassword })
-    const res = await fetch(`${API_BASE}/api/auth/check-admin?${params}`)
-    if (!res.ok) return false
-    const data = await res.json()
-    return data.is_admin === true
-  } catch {
-    return false
+  const params = new URLSearchParams({ email: userEmail, password: userPassword })
+  const res = await fetch(`${API_BASE}/api/auth/check-admin?${params}`)
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Invalid credentials')
+    if (res.status === 403) throw new Error('Not authorized as admin')
+    throw new Error('Authentication service unavailable')
   }
+  const data = await res.json()
+  if (data.is_admin !== true) throw new Error('Not authorized as admin')
+  return true
 }
 
 export default function UserRegistration({ onRegister }) {
@@ -50,12 +51,7 @@ export default function UserRegistration({ onRegister }) {
         if (isSupabaseConfigured) {
           const data = await signIn({ email: email.trim(), password })
           const user = data.user
-          const isAdmin = await checkAdminRole(user.email || email.trim(), password)
-          if (!isAdmin) {
-            setError('Not authorized as admin')
-            setSubmitting(false)
-            return
-          }
+          await checkAdminRole(user.email || email.trim(), password)
           const localUser = {
             name: user.user_metadata?.full_name || email.split('@')[0],
             email: user.email,
@@ -70,12 +66,7 @@ export default function UserRegistration({ onRegister }) {
           onRegister(localUser)
         } else {
           // No Supabase — check admin endpoint directly
-          const isAdmin = await checkAdminRole(email.trim(), password)
-          if (!isAdmin) {
-            setError('Not authorized as admin')
-            setSubmitting(false)
-            return
-          }
+          await checkAdminRole(email.trim(), password)
           const localUser = {
             name: email.split('@')[0],
             email: email.trim(),

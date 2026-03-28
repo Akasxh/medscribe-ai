@@ -276,16 +276,20 @@ export default function AdminDashboard() {
                           const isRecent = doc.lastActive && (Date.now() - doc.lastActive.getTime()) < 24 * 60 * 60 * 1000
                           return (
                             <tr key={doc.name} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                              <td className="px-4 py-3 font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                                <UserCheck className="w-4 h-4 text-slate-400" />
-                                {doc.name}
+                              <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                                <div className="flex items-center gap-2">
+                                  <UserCheck className="w-4 h-4 text-slate-400 shrink-0" />
+                                  {doc.name}
+                                </div>
                               </td>
                               <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
                                 {doc.consultations}
                               </td>
-                              <td className="px-4 py-3 text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5" />
-                                {doc.lastActive ? formatTime(doc.lastActive.toISOString()) : '--'}
+                              <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                                  {doc.lastActive ? formatTime(doc.lastActive.toISOString()) : '--'}
+                                </div>
                               </td>
                               <td className="px-4 py-3">
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full ${

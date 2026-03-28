@@ -175,7 +175,8 @@ export default function PatientList({ sessions, selectedId, onSelect }) {
 }
 
 function StatusBadge({ status }) {
-  const isActive = status === 'active'
+  const normalized = status || 'unknown'
+  const isActive = normalized === 'active'
   return (
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full ${
@@ -185,7 +186,7 @@ function StatusBadge({ status }) {
       }`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-      {status}
+      {normalized.charAt(0).toUpperCase() + normalized.slice(1)}
     </span>
   )
 }

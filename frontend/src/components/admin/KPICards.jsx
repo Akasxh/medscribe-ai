@@ -85,15 +85,15 @@ export default function KPICards({ sessions }) {
       <KPICard
         icon={ShieldCheck}
         label="Avg Safety Score"
-        value={`${avgSafety}/100`}
-        sub="Based on CDS alerts"
+        value={total > 0 ? `${avgSafety}/100` : '--'}
+        sub={total > 0 ? 'Based on CDS alerts' : 'Awaiting data'}
         color="emerald"
       />
       <KPICard
         icon={Award}
         label="FHIR Grade A"
-        value={`${fhirAPct}%`}
-        sub={`${fhirACount} of ${total} sessions`}
+        value={total > 0 ? `${fhirAPct}%` : '--'}
+        sub={total > 0 ? `${fhirACount} of ${total} sessions` : 'Awaiting data'}
         color="violet"
       />
       <KPICard
