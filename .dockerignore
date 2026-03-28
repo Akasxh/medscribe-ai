@@ -3,7 +3,9 @@ node_modules
 **/__pycache__
 **/*.pyc
 .env
-.env.*
+.env.local
+.env.development
+# .env.production is intentionally NOT excluded — Vite needs it at build time
 .git
 .gitignore
 *.md

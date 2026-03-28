@@ -10,9 +10,7 @@ ENV VITE_ADMIN_EMAIL=jhmedvani2026@gmail.com
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
-# Cache buster — change this value to force a fresh frontend build
-ARG CACHEBUST=3
-RUN npm run build
+RUN echo "build-v4-$(date +%s)" > /tmp/cachebust && npm run build
 
 # Stage 2: Python backend + serve frontend
 FROM python:3.12-slim
