@@ -151,7 +151,7 @@ export default function ConsultationSummary({ clinicalNote, fhirQuality, cdsAler
             <div className="text-caption text-slate-500 dark:text-slate-400 uppercase tracking-wider">Diagnosis</div>
             {diagnosis.map((d, i) => (
               <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-200 flex-1">{d.condition}</span>
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-200 flex-1 min-w-0 truncate">{d.condition}</span>
                 {d.confidence != null && (
                   <span className="text-[10px] font-mono text-slate-400">{Math.round(d.confidence * 100)}%</span>
                 )}

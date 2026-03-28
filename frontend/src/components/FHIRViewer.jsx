@@ -86,9 +86,9 @@ const ResourceCard = React.memo(function ResourceCard({ resource, index }) {
         onClick={() => setExpanded(!expanded)}
         className="w-full px-3 py-2.5 flex items-center gap-2.5 text-left hover:bg-slate-50/80 dark:hover:bg-slate-700/20 transition-colors"
       >
-        <IconComponent className={`w-4 h-4 ${colors.text} ${colors.dark?.text} shrink-0`} />
+        <IconComponent className={`w-4 h-4 ${colors.text} shrink-0`} />
         <div className="flex-1 min-w-0">
-          <span className={`text-[12px] font-semibold ${colors.text} ${colors.dark?.text}`}>{type}</span>
+          <span className={`text-[12px] font-semibold ${colors.text}`}>{type}</span>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{summary}</p>
         </div>
         <div className="flex items-center gap-1 shrink-0">

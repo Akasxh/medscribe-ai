@@ -65,7 +65,7 @@ export default function ABHABadge({ onAbhaIdChange }) {
 
       {/* Popover */}
       {expanded && (
-        <div className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg z-50 animate-slide-up overflow-hidden">
+        <div className="absolute top-full right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg z-50 animate-slide-up overflow-hidden">
           {/* Header */}
           <div className="px-4 py-3 bg-emerald-50 dark:bg-emerald-950/30 border-b border-emerald-100 dark:border-emerald-900/50">
             <div className="flex items-center gap-2">

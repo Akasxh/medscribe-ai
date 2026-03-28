@@ -1,6 +1,4 @@
 import os
-import pathlib
-import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -126,7 +124,7 @@ if os.path.exists(_static_dir):
         """SPA fallback: serve index.html for all non-API/WS routes."""
         if full_path.startswith(("api/", "ws/", "rx/")):
             raise HTTPException(status_code=404, detail="Not found")
-        safe_root = pathlib.Path(_static_dir).resolve()
+        safe_root = Path(_static_dir).resolve()
         requested = (safe_root / full_path).resolve()
         if str(requested).startswith(str(safe_root)) and requested.is_file():
             return FileResponse(str(requested))
