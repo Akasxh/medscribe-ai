@@ -13,6 +13,7 @@ from services.gemini_service import GeminiExtractionService
 from services.fhir_service import FHIRBundleBuilder
 from services.cds_service import check_clinical_alerts
 from services.terminology_service import validate_clinical_data
+from services.supabase_service import persist_session as _persist_to_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -534,6 +535,23 @@ async def _process_and_send(
             len(fhir_bundle.get("entry", [])),
             len(cds_alerts),
         )
+
+        # Fire-and-forget: persist to Supabase (failure won't break WS)
+        try:
+            asyncio.create_task(
+                _persist_to_supabase(
+                    session_id=session.id,
+                    doctor_id=None,  # TODO: wire doctor_id from auth
+                    transcript=session.transcript,
+                    clinical_data=clinical_data,
+                    fhir_bundle=fhir_bundle,
+                    fhir_quality=fhir_quality,
+                    cds_alerts=cds_alerts,
+                    specialty=specialty,
+                )
+            )
+        except Exception as persist_exc:
+            logger.warning("Supabase persist_session task failed to start: %s", persist_exc)
 
     except Exception as e:
         logger.error("Processing error for session %s: %s", session.id, e, exc_info=True)
