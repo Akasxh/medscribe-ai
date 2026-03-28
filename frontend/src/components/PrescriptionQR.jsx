@@ -21,27 +21,14 @@ export default function PrescriptionQR({ medications = [], patientInfo = {}, ses
       const RX_BASE_URL = `${window.location.origin}/rx`
       const rxUrl = `${RX_BASE_URL}/${sessionId || 'unknown'}`
 
-      const fallbackPayload = {
-        id: sessionId || 'unknown',
-        doctor: doctorName || 'Doctor',
-        patient: patientInfo?.name || 'Patient',
-        date: new Date().toISOString().slice(0, 10),
-        rx: medications.map(m => ({
-          drug: m.generic_name || m.name || 'Unknown',
-          dose: m.dosage || '',
-          freq: m.frequency || '',
-          dur: m.duration || '',
-        })),
-      }
+      // Always encode a URL — append doctor info as query params
+      const params = new URLSearchParams()
+      if (doctorName) params.set('doctor', doctorName)
+      if (patientInfo?.name) params.set('patient', patientInfo.name)
+      if (patientInfo?.reg) params.set('reg', patientInfo.reg)
+      if (patientInfo?.clinic) params.set('clinic', patientInfo.clinic)
 
-      // Try URL first (shorter), fall back to full data if URL is too long
-      let qrContent = rxUrl
-      const fullPayload = JSON.stringify({ url: rxUrl, ...fallbackPayload })
-
-      // If payload is small enough for QR, encode the full data
-      if (fullPayload.length < 2000) {
-        qrContent = fullPayload
-      }
+      const qrContent = `${rxUrl}${params.toString() ? '?' + params.toString() : ''}`
 
       const dataUrl = await QRCode.toDataURL(qrContent, {
         width: 320,

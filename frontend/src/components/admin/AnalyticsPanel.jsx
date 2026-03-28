@@ -88,8 +88,8 @@ export default function AnalyticsPanel({ sessions }) {
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={perDay}>
-              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#64748b' }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#64748b' }} />
               <Tooltip
                 contentStyle={{
                   background: isDark ? '#1e293b' : '#ffffff',
@@ -111,8 +111,8 @@ export default function AnalyticsPanel({ sessions }) {
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={topDx} layout="vertical">
-              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={100} />
+              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#64748b' }} />
+              <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: isDark ? '#94a3b8' : '#64748b' }} width={100} />
               <Tooltip
                 contentStyle={{
                   background: isDark ? '#1e293b' : '#ffffff',
@@ -141,9 +141,12 @@ export default function AnalyticsPanel({ sessions }) {
                 cx="50%"
                 cy="50%"
                 outerRadius={60}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent, x, y, textAnchor }) => (
+                  <text x={x} y={y} textAnchor={textAnchor} fill={isDark ? '#94a3b8' : '#64748b'} fontSize={10}>
+                    {`${name} ${(percent * 100).toFixed(0)}%`}
+                  </text>
+                )}
                 labelLine={false}
-                fontSize={10}
               >
                 {langDist.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -158,7 +161,7 @@ export default function AnalyticsPanel({ sessions }) {
                   color: isDark ? '#f1f5f9' : '#0f172a',
                 }}
               />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
+              <Legend wrapperStyle={{ fontSize: '11px', color: isDark ? '#94a3b8' : '#64748b' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>

@@ -48,13 +48,17 @@ async def list_sessions():
 @router.post("/corrections")
 async def submit_correction(req: CorrectionRequest):
     """Store a doctor's correction for continuous learning."""
-    correction = store_correction(
-        session_id=req.session_id,
-        transcript=req.transcript,
-        original_note=req.original_note,
-        corrected_note=req.corrected_note,
-        field_path=req.field_path,
-    )
+    try:
+        correction = store_correction(
+            session_id=req.session_id,
+            transcript=req.transcript,
+            original_note=req.original_note,
+            corrected_note=req.corrected_note,
+            field_path=req.field_path,
+        )
+    except Exception as e:
+        logger.error("Failed to save correction: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to save correction. Please try again.")
     return {"status": "stored", "correction": correction}
 
 
@@ -114,6 +118,14 @@ async def list_all_consultations() -> list[dict[str, Any]]:
             .limit(100)
             .execute()
         )
+        # Supabase returns arrays for joined tables — normalize to single objects
+        for row in result.data:
+            notes = row.pop("clinical_notes", [])
+            row["clinical_note"] = notes[0] if notes else None
+            bundles = row.pop("fhir_bundles", [])
+            row["fhir_bundle"] = bundles[0] if bundles else None
+            row.setdefault("cds_alerts", [])
+            row.setdefault("fhir_quality", None)
         return result.data  # type: ignore[return-value]
     except Exception as exc:
         logger.error("Failed to fetch consultations from Supabase: %s", exc)
