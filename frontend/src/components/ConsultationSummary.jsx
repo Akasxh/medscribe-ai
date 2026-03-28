@@ -68,16 +68,11 @@ export default function ConsultationSummary({ clinicalNote, fhirQuality, cdsAler
             </div>
           </div>
 
-          {/* Diagnosis */}
+          {/* Follow-up */}
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-            <div className="text-caption text-slate-500 dark:text-slate-400 mb-0.5">Diagnosis</div>
-            {diagnosis?.length > 0 ? (
-              <div>
-                <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">{diagnosis[0].condition}</div>
-                {diagnosis[0].confidence != null && (
-                  <span className="text-[10px] font-mono text-slate-400">{Math.round(diagnosis[0].confidence * 100)}% confidence</span>
-                )}
-              </div>
+            <div className="text-caption text-slate-500 dark:text-slate-400 mb-0.5">Follow-up</div>
+            {follow_up ? (
+              <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">{follow_up}</div>
             ) : (
               <div className="text-sm text-slate-400">--</div>
             )}

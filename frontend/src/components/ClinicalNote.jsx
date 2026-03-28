@@ -653,7 +653,7 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
 
         {/* Recommended Tests */}
         {recommended_tests?.length > 0 && (
-          <Section icon={FlaskConical} title="Recommended Tests" color="text-cyan-500" count={recommended_tests.length}>
+          <Section icon={FlaskConical} title="Recommended Tests" color="text-cyan-500" count={recommended_tests.length} defaultOpen={false}>
             <div className="space-y-1">
               {recommended_tests.map((test, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm py-0.5">
@@ -667,7 +667,7 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
 
         {/* Risk Factors */}
         {risk_factors?.length > 0 && (
-          <Section icon={ShieldAlert} title="Risk Factors" color="text-orange-500" count={risk_factors.length}>
+          <Section icon={ShieldAlert} title="Risk Factors" color="text-orange-500" count={risk_factors.length} defaultOpen={false}>
             <div className="flex flex-wrap gap-1.5">
               {risk_factors.map((rf, i) => (
                 <Badge key={i} className="bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 border border-orange-200/70 dark:border-orange-800/40">
