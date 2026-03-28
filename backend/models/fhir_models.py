@@ -31,6 +31,7 @@ PROFILES = {
     "Composition": f"{ABDM_PROFILE_BASE}/OPConsultRecord",
     "Practitioner": f"{ABDM_PROFILE_BASE}/Practitioner",
     "Organization": f"{ABDM_PROFILE_BASE}/Organization",
+    "AuditEvent": f"{FHIR_R4_BASE}/AuditEvent",
 }
 
 # ABHA identifier system URI

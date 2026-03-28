@@ -13,7 +13,6 @@ import SafetyScoreCard from './components/SafetyScoreCard'
 import useSafetyScore from './hooks/useSafetyScore'
 import ConsentBanner from './components/ConsentBanner'
 import ABHABadge from './components/ABHABadge'
-import UserRegistration from './components/UserRegistration'
 import ErrorBoundary from './components/ErrorBoundary'
 import useWebSocket from './hooks/useWebSocket'
 import useAudioRecorder from './hooks/useAudioRecorder'
@@ -187,11 +186,6 @@ export default function App() {
 
   const hasSession = sessionActive || hasStartedRef.current || transcriptLines.length > 0 || ws.clinicalNote
   const showHero = !hasSession
-
-  // Show registration screen if no user is logged in
-  if (!user) {
-    return <UserRegistration onRegister={handleRegister} />
-  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">

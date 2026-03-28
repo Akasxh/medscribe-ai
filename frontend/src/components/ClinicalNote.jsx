@@ -5,6 +5,7 @@ import {
   Activity, X, BookOpen
 } from 'lucide-react'
 import { useState, useCallback, useRef, useEffect } from 'react'
+import DrugAlternatives from './DrugAlternatives'
 
 // ─── Animated collapsible section ───
 function Section({ icon: Icon, title, color, children, defaultOpen = true, count }) {
@@ -234,6 +235,7 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
   const [editData, setEditData] = useState(null)
   const [saving, setSaving] = useState(false)
   const [correctionCount, setCorrectionCount] = useState(0)
+  const [selectedDrug, setSelectedDrug] = useState(null)
 
   const startEditing = useCallback(() => {
     setEditData(structuredClone(data))
@@ -559,12 +561,23 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
                     <tr key={i} className={`border-t border-slate-100 dark:border-slate-700/40 ${i % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-800/30' : ''}`}>
                       <td className="py-2 px-2">
                         <div className="flex items-baseline gap-1 flex-wrap">
-                          <EditableText
-                            value={m.name}
-                            onChange={v => updateField(`medications.${i}.name`, v)}
-                            editing={editing}
-                            className="font-medium text-slate-700 dark:text-slate-200 text-[13px]"
-                          />
+                          {editing ? (
+                            <EditableText
+                              value={m.name}
+                              onChange={v => updateField(`medications.${i}.name`, v)}
+                              editing={editing}
+                              className="font-medium text-slate-700 dark:text-slate-200 text-[13px]"
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedDrug(m.name)}
+                              className="font-medium text-blue-600 dark:text-blue-400 text-[13px] hover:underline cursor-pointer text-left"
+                              title="View alternatives"
+                            >
+                              {m.name}
+                            </button>
+                          )}
                           {m.generic_name && m.generic_name !== m.name && (
                             <span className="text-[10px] text-slate-400 dark:text-slate-500">({m.generic_name})</span>
                           )}
@@ -690,6 +703,13 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
           </Section>
         )}
       </div>
+
+      {selectedDrug && (
+        <DrugAlternatives
+          drugName={selectedDrug}
+          onClose={() => setSelectedDrug(null)}
+        />
+      )}
     </div>
   )
 }

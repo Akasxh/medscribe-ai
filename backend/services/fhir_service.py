@@ -176,6 +176,10 @@ class FHIRBundleBuilder:
             detected_issue = self._build_detected_issue(alert)
             entries.append({"fullUrl": f"urn:uuid:{detected_issue['id']}", "resource": detected_issue})
 
+        # AuditEvent tracking consultation creation
+        audit_event = self._build_audit_event()
+        entries.append({"fullUrl": f"urn:uuid:{audit_event['id']}", "resource": audit_event})
+
         # Collect references for Composition sections (use urn:uuid)
         entry_references: list[dict] = []
         for entry in entries:
@@ -813,6 +817,38 @@ class FHIRBundleBuilder:
         ]
 
         return resource
+
+    def _build_audit_event(self) -> dict:
+        """Build a FHIR R4 AuditEvent recording this consultation creation."""
+        return {
+            "resourceType": "AuditEvent",
+            "id": self._make_id(),
+            "meta": {"profile": [PROFILES["AuditEvent"]]},
+            "type": {
+                "system": "http://dicom.nema.org/resources/ontology/DCM",
+                "code": "110110",
+                "display": "Patient Record",
+            },
+            "action": "C",
+            "recorded": self._bundle_timestamp,
+            "outcome": "0",
+            "agent": [
+                {
+                    "who": self._practitioner_ref(),
+                    "requestor": True,
+                }
+            ],
+            "entity": [
+                {
+                    "what": self._patient_ref(),
+                    "type": {
+                        "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type",
+                        "code": "1",
+                        "display": "Person",
+                    },
+                }
+            ],
+        }
 
     def _build_service_request(self, test_name: str) -> dict:
         """Build a ServiceRequest for a recommended diagnostic test."""

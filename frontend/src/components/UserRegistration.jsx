@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Activity, User, Building2, Hash } from 'lucide-react'
+import { Activity, User, Building2, Hash, ShieldCheck } from 'lucide-react'
 
 export default function UserRegistration({ onRegister }) {
   const [name, setName] = useState('')
   const [doctorId, setDoctorId] = useState('')
   const [hospital, setHospital] = useState('')
   const [patientName, setPatientName] = useState('')
+  const [role, setRole] = useState('doctor')
   const [error, setError] = useState('')
 
   const handleSubmit = (e) => {
@@ -21,6 +22,7 @@ export default function UserRegistration({ onRegister }) {
       doctorId: doctorId.trim() || null,
       hospital: hospital.trim() || null,
       patientName: patientName.trim() || null,
+      role,
       registeredAt: new Date().toISOString(),
     }
 
@@ -125,6 +127,39 @@ export default function UserRegistration({ onRegister }) {
                   placeholder="Patient's name (optional)"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                 />
+              </div>
+            </div>
+
+            {/* Role selector */}
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+                Login as
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRole('doctor')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium border transition-all ${
+                    role === 'doctor'
+                      ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400'
+                      : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                  }`}
+                >
+                  <User className="w-4 h-4" />
+                  Doctor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('admin')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium border transition-all ${
+                    role === 'admin'
+                      ? 'bg-violet-50 dark:bg-violet-950/30 border-violet-300 dark:border-violet-700 text-violet-700 dark:text-violet-400'
+                      : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                  }`}
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  Admin
+                </button>
               </div>
             </div>
 
