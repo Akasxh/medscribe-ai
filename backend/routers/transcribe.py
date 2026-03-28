@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 
 from models.schemas import Session, SessionStatus, ClinicalNote
@@ -13,7 +13,6 @@ from services.gemini_service import GeminiExtractionService
 from services.fhir_service import FHIRBundleBuilder
 from services.cds_service import check_clinical_alerts
 from services.terminology_service import validate_clinical_data
-from services.stt_service import transcribe_audio, get_stt_status
 
 logger = logging.getLogger(__name__)
 
@@ -75,24 +74,6 @@ def _get_gemini_service() -> GeminiExtractionService:
         _gemini_service = GeminiExtractionService()
     return _gemini_service
 
-
-@router.post("/api/transcribe")
-async def transcribe_audio_endpoint(
-    file: UploadFile = File(...),
-    language: str = Form(default="hi-IN"),
-):
-    """Transcribe audio using Sarvam AI STT."""
-    audio_bytes = await file.read()
-    transcript = await transcribe_audio(audio_bytes, language)
-    if transcript is not None:
-        return {"transcript": transcript, "language": language}
-    return {"error": "Transcription failed", "transcript": ""}
-
-
-@router.get("/api/stt/status")
-async def stt_status():
-    """Return STT service status."""
-    return get_stt_status()
 
 
 @router.websocket("/ws/transcribe/{session_id}")

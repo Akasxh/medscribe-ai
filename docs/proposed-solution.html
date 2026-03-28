@@ -545,11 +545,10 @@
   </p>
 
   <p>
-    MedScribe AI goes beyond English and Hindi. With <strong>Sarvam AI integration</strong> for server-side
-    speech-to-text, the system now supports <strong>10 Indian languages</strong> including Tamil, Telugu,
+    MedScribe AI goes beyond English and Hindi. Using the <strong>Web Speech API</strong> with native
+    browser speech recognition, the system supports <strong>10 Indian languages</strong> including Tamil, Telugu,
     Bengali, Marathi, Gujarati, Kannada, and Malayalam&mdash;with full code-mixed support (Hinglish,
-    Tanglish, and more). Doctors can toggle between the zero-cost browser STT and Sarvam AI's superior
-    accuracy for Indian languages. A <strong>digital prescription system with QR codes</strong> lets patients
+    Tanglish, and more). Zero-cost, zero-latency speech recognition runs entirely on-device. A <strong>digital prescription system with QR codes</strong> lets patients
     scan and view their prescription on any phone, while a <strong>Patient Safety Score</strong> (0&ndash;100)
     provides an at-a-glance clinical risk assessment. A <strong>patient consent recording</strong> mechanism
     ensures GDPR-style compliance before any recording begins, and <strong>13 clinical nudge rules</strong>
@@ -576,7 +575,7 @@
       <div class="arch-detail">
         React 18 + Vite<br>
         Tailwind CSS<br>
-        Web Speech / Sarvam AI<br>
+        Web Speech API<br>
         10 Languages + QR Rx
       </div>
     </div>
@@ -612,9 +611,9 @@
 
   <h3>Data Flow</h3>
   <p>
-    The browser captures speech via either the native Web Speech API or <strong>Sarvam AI's
-    server-side STT</strong> (supporting 22 Indian languages with code-mixed speech). Doctors
-    select their preferred language and STT engine from an in-app selector. Recognized text
+    The browser captures speech via the native <strong>Web Speech API</strong>, supporting
+    10 Indian languages with code-mixed speech recognition. Doctors
+    select their preferred language from an in-app selector. Recognized text
     streams over a WebSocket to the FastAPI backend. At session end, the full transcript is
     sent to Gemini 2.5 Flash in a single <strong>batch extraction</strong> call&mdash;eliminating
     data loss from incremental overwrites. The AI returns structured JSON which is mapped to
@@ -629,7 +628,7 @@
     </thead>
     <tbody>
       <tr><td>Frontend</td><td>React 18, Vite, Tailwind CSS</td><td>PWA-capable, fast HMR, mobile-first utility CSS</td></tr>
-      <tr><td>Speech-to-Text</td><td>Web Speech API + Sarvam AI</td><td>Dual-mode: free browser STT or Sarvam AI for 22 Indian languages</td></tr>
+      <tr><td>Speech-to-Text</td><td>Web Speech API (browser-native)</td><td>Zero-cost on-device STT, 10 Indian languages with code-mixing</td></tr>
       <tr><td>Backend</td><td>Python FastAPI + WebSocket</td><td>Async-native, auto-docs, WebSocket first-class</td></tr>
       <tr><td>AI Extraction</td><td>Google Gemini 2.5 Flash</td><td>Fast structured output, code-mixed understanding</td></tr>
       <tr><td>FHIR Mapping</td><td>Custom Python + Pydantic models</td><td>Type-safe R4 resource generation with validation</td></tr>
@@ -640,7 +639,7 @@
 
   <h3>Security &amp; Privacy Considerations</h3>
   <ul>
-    <li>Speech processed in-browser (Web Speech API) or via encrypted API call (Sarvam AI)&mdash;raw audio never stored</li>
+    <li>Speech processed entirely in-browser via Web Speech API&mdash;raw audio never leaves the device</li>
     <li><strong>GDPR-style patient consent recording</strong> required before any recording session begins</li>
     <li>WebSocket connection scoped to session; no persistent patient data stored on server</li>
     <li>FHIR resources generated on-demand, exportable as local JSON files</li>
@@ -669,8 +668,8 @@
       <h4>10 Indian Languages + Code-Mixed Speech</h4>
       <p>
         Supports Hindi, English, Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, and Malayalam
-        with full code-mixed support (Hinglish, Tanglish). Dual STT: browser-native Web Speech API
-        (free) or <strong>Sarvam AI</strong> server-side STT with 22 Indian languages. Maps
+        with full code-mixed support (Hinglish, Tanglish). Zero-cost browser-native Web Speech API
+        runs entirely on-device with no API costs. Maps
         <strong>59 Indian drug brand names</strong> to generic equivalents with RxNorm codes and
         standard dosages.
       </p>
@@ -951,7 +950,7 @@
     <div class="timeline-item">
       <div class="timeline-phase">Phase 1 &mdash; Delivered (Hackathon)</div>
       <h4>Full-Featured MVP</h4>
-      <p>10 Indian languages via Sarvam AI + browser STT, FHIR R4 output, CDS engine, differential diagnosis,
+      <p>10 Indian languages via browser-native STT, FHIR R4 output, CDS engine, differential diagnosis,
         digital prescriptions with QR, patient safety score, clinical nudges, doctor registration, batch extraction, demo mode, PWA.</p>
     </div>
     <div class="timeline-item">
