@@ -4,7 +4,7 @@ import html
 import json
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
@@ -60,7 +60,7 @@ def _segment_hash(text: str) -> str:
 
 def _cleanup_sessions() -> None:
     """Remove expired sessions to prevent unbounded memory growth."""
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     expired = [
         sid for sid, session in sessions_store.items()
         if (now - session.created_at).total_seconds() > SESSION_TTL_HOURS * 3600
@@ -95,7 +95,7 @@ async def transcribe_audio_endpoint(
     transcript = await transcribe_audio(audio_bytes, language, content_type=content_type)
     if transcript is not None:
         return {"transcript": transcript, "language": language}
-    return {"error": "Transcription failed", "transcript": ""}
+    raise HTTPException(status_code=502, detail="Transcription failed")
 
 
 @router.get("/api/stt/status")
@@ -258,7 +258,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                             len(full_text),
                         )
 
-                session.completed_at = datetime.now()
+                session.completed_at = datetime.now(timezone.utc)
                 session.status = SessionStatus.COMPLETED
                 sessions_store[session_id] = session
 

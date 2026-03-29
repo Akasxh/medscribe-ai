@@ -306,7 +306,11 @@ body {
   animation: fade-in-word 0.15s ease-in;
 }
 
-/* ─── Skeleton shimmer (uses Tailwind keyframes) ─── */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .skeleton {
   background: linear-gradient(90deg, var(--color-surface-2) 25%, var(--color-border-subtle) 37%, var(--color-surface-2) 63%);
   background-size: 400% 100%;

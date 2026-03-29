@@ -155,16 +155,15 @@ DRUG_INTERACTIONS: list[DrugInteraction] = [
     # not clinically inhibit theophylline metabolism (FDA label confirms no
     # significant PK interaction at standard doses).
     DrugInteraction(
-        drug_a=frozenset({"pantoprazole", "pan-d", "pan d", "pantop",
-                          "pantocid"}),
+        drug_a=frozenset({"omeprazole", "esomeprazole", "omez", "ocid",
+                          "nexpro", "esomep"}),
         drug_b=frozenset({"clopidogrel", "clopilet", "plavix"}),
         severity=AlertSeverity.WARNING,
-        title="Pantoprazole + Clopidogrel: Reduced antiplatelet efficacy",
+        title="Omeprazole/Esomeprazole + Clopidogrel: Reduced antiplatelet efficacy",
         description=(
-            "Pantoprazole (Pan-D) can reduce the conversion of Clopidogrel "
-            "to its active metabolite via CYP2C19 inhibition, diminishing "
-            "its antiplatelet effect. Consider using a non-interacting PPI "
-            "or an H2-blocker."
+            "Omeprazole/Esomeprazole inhibit CYP2C19 and reduce Clopidogrel "
+            "conversion to its active metabolite, diminishing "
+            "its antiplatelet effect. Prefer pantoprazole or an H2-blocker."
         ),
     ),
     DrugInteraction(
@@ -531,15 +530,14 @@ def _parse_dose_mg(dosage_str: str) -> float | None:
     # Try multiplier pattern first: "2x500mg", "2×500mg", "2*500mg"
     mult_match = re.search(r'(\d+)\s*[x×*]\s*(\d+\.?\d*)\s*(mg|mcg|g|ml)?\b', s)
     if mult_match:
-        multiplier = int(mult_match.group(1))
+        # Return the single-dose value, not total (2x500mg = 500mg per dose)
         base_value = float(mult_match.group(2))
         unit = mult_match.group(3) or "mg"
-        value = multiplier * base_value
         if unit == 'g':
-            value *= 1000
+            base_value *= 1000
         elif unit == 'mcg':
-            value /= 1000
-        return value
+            base_value /= 1000
+        return base_value
 
     # Find ALL number+unit matches so we can pick the best one.
     # Use the *last* match (most likely the actual dose when preceded by

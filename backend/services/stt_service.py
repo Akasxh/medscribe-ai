@@ -70,7 +70,8 @@ async def transcribe_audio(
                     files={"file": (filename, audio_file, mime)},
                     data={
                         "language_code": language_code,
-                        "model": "saaras:v2",
+                        "model": "saaras:v3",
+                        "mode": "codemix",
                         "with_timestamps": "false",
                     },
                 )
