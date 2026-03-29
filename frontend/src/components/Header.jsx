@@ -51,8 +51,8 @@ export default function Header({ user, onLogout }) {
                   <button
                     onClick={onLogout}
                     className="w-10 h-10 min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                    aria-label="Change Doctor"
-                    title="Change Doctor"
+                    aria-label="Log out"
+                    title="Log out"
                   >
                     <LogOut className="w-4 h-4" />
                   </button>

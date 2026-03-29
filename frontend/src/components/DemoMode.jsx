@@ -216,6 +216,7 @@ export default function DemoMode({ onTranscript, onComplete, isRecording, onPlay
                 key={demo.name}
                 onClick={() => playDemo(demo)}
                 disabled={isDisabled}
+                aria-label={`Play demo: ${demo.name}`}
                 title={demo.description || demo.name}
                 className={`
                   inline-flex items-center gap-1.5 px-4 py-2.5 min-h-[48px] rounded-full text-sm sm:text-[11px] font-medium transition-all

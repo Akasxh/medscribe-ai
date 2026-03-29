@@ -31,6 +31,7 @@ function Section({ icon: Icon, title, color, children, defaultOpen = true, count
     <div className="py-1">
       <button
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
         className="w-full flex items-center gap-2 px-4 py-2 text-left group transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-700/30 rounded-md"
       >
         <Icon className={`w-4 h-4 ${color} shrink-0`} />
