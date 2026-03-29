@@ -85,10 +85,6 @@ export default function App() {
   const [sessionActive, setSessionActive] = useState(false)
   const hasStartedRef = useRef(false)
 
-  // Show admin login page
-  if (page === 'admin-login') {
-    return <AdminLogin onBack={() => { window.location.hash = ''; setPage('app') }} />
-  }
   // Set-based dedup for all final transcripts (live + demo) — catches non-consecutive duplicates
   const seenFinalsRef = useRef(new Set())
 
@@ -202,6 +198,11 @@ export default function App() {
 
   const hasSession = sessionActive || hasStartedRef.current || transcriptLines.length > 0 || ws.clinicalNote
   const showHero = !hasSession
+
+  // Show admin login page
+  if (page === 'admin-login') {
+    return <AdminLogin onBack={() => { window.location.hash = ''; setPage('app') }} />
+  }
 
   // Show registration screen if no user is logged in
   if (!user) {
