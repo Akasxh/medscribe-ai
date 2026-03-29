@@ -20,7 +20,7 @@ import useAudioRecorder from './hooks/useAudioRecorder'
 import LanguageSelector from './components/LanguageSelector'
 import ToastContainer from './components/ToastNotification'
 import LandingHero from './components/LandingHero'
-import { FileJson, ClipboardList, Shield, RotateCcw, CloudUpload, CheckCircle, XCircle } from 'lucide-react'
+import { FileJson, ClipboardList, Shield, RotateCcw } from 'lucide-react'
 
 // Lazy-loaded components (not needed on initial render)
 const FHIRViewer = lazy(() => import('./components/FHIRViewer'))
@@ -77,15 +77,13 @@ export default function App() {
   const hasStartedRef = useRef(false)
   // Set-based dedup for all final transcripts (live + demo) — catches non-consecutive duplicates
   const seenFinalsRef = useRef(new Set())
-  const [uploadStatus, setUploadStatus] = useState(null) // null | 'uploading' | 'success' | 'error'
+  const [uploadStatus, setUploadStatus] = useState(null)
 
   const handleUploadToDB = useCallback(async () => {
     if (!ws.clinicalNote || uploadStatus === 'uploading') return
     setUploadStatus('uploading')
-
-    const API_BASE = import.meta.env.VITE_API_URL || ''
     try {
-      const res = await fetch(`${API_BASE}/api/sessions/upload`, {
+      const res = await fetch('/api/sessions/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -101,15 +99,9 @@ export default function App() {
           cds_alerts: ws.cdsAlerts,
         }),
       })
-      if (res.ok) {
-        setUploadStatus('success')
-      } else {
-        setUploadStatus('error')
-      }
-    } catch {
-      setUploadStatus('error')
-    }
-  }, [ws.clinicalNote, ws.fhirBundle, ws.fhirQuality, ws.cdsAlerts, sessionId, user, specialty, transcriptLines, uploadStatus])
+      setUploadStatus(res.ok ? 'success' : 'error')
+    } catch { setUploadStatus('error') }
+  }, [ws, sessionId, user, specialty, transcriptLines, uploadStatus])
 
   const handleRegister = useCallback((newUser) => {
     setUser(newUser)
@@ -490,7 +482,6 @@ export default function App() {
               />
             </Suspense>
 
-            {/* Upload to Database button */}
             {ws.clinicalNote && (
               <div className="card p-4">
                 <button
@@ -500,31 +491,12 @@ export default function App() {
                     uploadStatus === 'success'
                       ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-200'
                       : uploadStatus === 'error'
-                        ? 'bg-red-50 text-red-700 border-2 border-red-200 hover:bg-red-100'
-                        : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 shadow-sm'
+                        ? 'bg-red-50 text-red-700 border-2 border-red-200'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
                   } disabled:opacity-60`}
                 >
-                  {uploadStatus === 'uploading' ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Uploading...
-                    </>
-                  ) : uploadStatus === 'success' ? (
-                    <>
-                      <CheckCircle className="w-5 h-5" />
-                      Saved to Hospital Database
-                    </>
-                  ) : uploadStatus === 'error' ? (
-                    <>
-                      <XCircle className="w-5 h-5" />
-                      Upload Failed — Tap to Retry
-                    </>
-                  ) : (
-                    <>
-                      <CloudUpload className="w-5 h-5" />
-                      Save to Hospital Database
-                    </>
-                  )}
+                  {uploadStatus === 'uploading' && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  {uploadStatus === 'uploading' ? 'Uploading...' : uploadStatus === 'success' ? '✓ Saved to Hospital Database' : uploadStatus === 'error' ? 'Failed — Tap to Retry' : '☁ Save to Hospital Database'}
                 </button>
               </div>
             )}

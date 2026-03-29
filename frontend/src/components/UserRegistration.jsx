@@ -11,18 +11,9 @@ export default function UserRegistration({ onRegister }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     const trimmed = name.trim()
-    if (!trimmed) {
-      setError('Please enter your name')
-      return
-    }
-    if (!patientName.trim()) {
-      setError('Please enter the patient name')
-      return
-    }
-    if (!hospital.trim()) {
-      setError('Please enter hospital/clinic name')
-      return
-    }
+    if (!trimmed) { setError('Please enter your name'); return }
+    if (!patientName.trim()) { setError('Please enter patient name'); return }
+    if (!hospital.trim()) { setError('Please enter hospital/clinic name'); return }
 
     const user = {
       name: trimmed,
@@ -153,15 +144,9 @@ export default function UserRegistration({ onRegister }) {
           </p>
         </div>
 
-        {/* Admin link */}
-        <a
-          href="/admin/login"
-          className="block text-center mt-4 text-xs text-slate-400 hover:text-violet-600 transition-colors"
-        >
+        <a href="/admin/login" className="block text-center mt-4 text-xs text-slate-400 hover:text-violet-600 transition-colors">
           Hospital Admin? Sign in here →
         </a>
-
-        {/* Footer */}
         <p className="text-center mt-3 text-[10px] text-slate-400 dark:text-slate-600">
           HACKMATRIX 2.0 — Jilo Health x NJACK IIT Patna
         </p>
