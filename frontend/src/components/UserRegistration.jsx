@@ -48,37 +48,20 @@ export default function UserRegistration({ onRegister }) {
       }
       setSubmitting(true)
       try {
-        if (isSupabaseConfigured) {
-          const data = await signIn({ email: email.trim(), password })
-          const user = data.user
-          await checkAdminRole(user.email || email.trim(), password)
-          const localUser = {
-            name: user.user_metadata?.full_name || email.split('@')[0],
-            email: user.email,
-            role: 'admin',
-            hospital: null,
-            doctorId: null,
-            patientName: null,
-            registeredAt: new Date().toISOString(),
-            supabaseId: user.id,
-          }
-          localStorage.setItem('medscribe_user', JSON.stringify(localUser))
-          onRegister(localUser)
-        } else {
-          // No Supabase — check admin endpoint directly
-          await checkAdminRole(email.trim(), password)
-          const localUser = {
-            name: email.split('@')[0],
-            email: email.trim(),
-            role: 'admin',
-            hospital: null,
-            doctorId: null,
-            patientName: null,
-            registeredAt: new Date().toISOString(),
-          }
-          localStorage.setItem('medscribe_user', JSON.stringify(localUser))
-          onRegister(localUser)
+        // Admin auth always goes through backend endpoint (admin_users table),
+        // NOT Supabase Auth — admins don't need a Supabase auth account.
+        await checkAdminRole(email.trim(), password)
+        const localUser = {
+          name: email.split('@')[0],
+          email: email.trim(),
+          role: 'admin',
+          hospital: null,
+          doctorId: null,
+          patientName: null,
+          registeredAt: new Date().toISOString(),
         }
+        localStorage.setItem('medscribe_user', JSON.stringify(localUser))
+        onRegister(localUser)
       } catch (err) {
         setError(err.message || 'Authentication failed')
       } finally {
