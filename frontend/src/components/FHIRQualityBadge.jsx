@@ -42,7 +42,7 @@ export default function FHIRQualityBadge({ quality, inline = false }) {
         {expanded && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setExpanded(false)} />
-            <div className={`absolute right-0 top-full mt-1 z-50 w-64 border rounded-lg p-3 shadow-lg ${expandedColor}`}>
+            <div className={`absolute right-0 top-full mt-1 z-50 w-64 max-w-[calc(100vw-2rem)] border rounded-lg p-3 shadow-lg ${expandedColor}`}>
               <div className="flex items-center gap-2 mb-2.5">
                 <span className={`text-sm font-bold px-2 py-0.5 rounded ${config.bg} ${config.text}`}>
                   Grade {config.label}

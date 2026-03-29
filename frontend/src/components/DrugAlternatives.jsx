@@ -167,7 +167,7 @@ export default function DrugAlternatives({ drugName, onClose }) {
                         <tr className="bg-slate-50 dark:bg-slate-700/40 text-[10px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">
                           <th className="text-left py-2 px-3">Brand</th>
                           <th className="text-left py-2 px-3 hidden sm:table-cell">Generic</th>
-                          <th className="text-left py-2 px-3">Category</th>
+                          <th className="text-left py-2 px-3 hidden sm:table-cell">Category</th>
                           <th className="text-left py-2 px-3 hidden sm:table-cell">Dosage</th>
                         </tr>
                       </thead>
@@ -201,7 +201,7 @@ export default function DrugAlternatives({ drugName, onClose }) {
                               <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 text-[12px] hidden sm:table-cell">
                                 {alt.generic || '\u2014'}
                               </td>
-                              <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 text-[12px]">
+                              <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 text-[12px] hidden sm:table-cell">
                                 {alt.category || '\u2014'}
                               </td>
                               <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 text-[12px] hidden sm:table-cell">

@@ -27,7 +27,7 @@ export default function SpecialtySelector({ value = "general", onChange, classNa
             aria-checked={isActive}
             onClick={() => onChange(s.value)}
             className={`
-              inline-flex items-center justify-center gap-1.5 px-4 py-2.5 min-h-[48px] rounded-full
+              inline-flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2.5 min-h-[48px] rounded-full
               text-sm sm:text-xs font-medium
               whitespace-nowrap flex-shrink-0 cursor-pointer
               hover:scale-105 active:scale-95 transition-transform duration-150
