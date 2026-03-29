@@ -451,7 +451,16 @@ export default function App() {
             {ws.clinicalNote && (
               <Suspense fallback={<LazyFallback />}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <ExportPanel clinicalNote={ws.clinicalNote} fhirBundle={ws.fhirBundle} />
+                  <ExportPanel
+                    clinicalNote={ws.clinicalNote}
+                    fhirBundle={ws.fhirBundle}
+                    sessionId={sessionId}
+                    user={user}
+                    specialty={specialty}
+                    transcript={transcriptLines.join(' ')}
+                    fhirQuality={ws.fhirQuality}
+                    cdsAlerts={ws.cdsAlerts}
+                  />
                   <PrescriptionQR
                     medications={ws.clinicalNote?.medications || []}
                     patientInfo={ws.clinicalNote?.patient_info || {}}

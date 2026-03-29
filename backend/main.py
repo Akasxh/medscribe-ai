@@ -112,6 +112,20 @@ async def health_check():
     }
 
 
+class UploadConsultationRequest(BaseModel):
+    session_id: str
+    doctor_name: str
+    doctor_id: str = ""
+    hospital: str = ""
+    patient_name: str = ""
+    specialty: str = "general"
+    transcript: str = ""
+    clinical_note: dict | None = None
+    fhir_bundle: dict | None = None
+    fhir_quality: dict | None = None
+    cds_alerts: list | None = None
+
+
 class AdminLoginRequest(BaseModel):
     email: str
     password: str
@@ -125,6 +139,26 @@ async def admin_login(req: AdminLoginRequest):
     if req.email == admin_email and req.password == admin_password:
         return {"email": req.email, "role": "admin", "token": "admin-session"}
     raise HTTPException(status_code=401, detail="Invalid email or password")
+
+
+@app.post("/api/upload-consultation")
+async def upload_consultation(req: UploadConsultationRequest):
+    """Upload a completed consultation to Supabase."""
+    from services.supabase_service import save_consultation
+
+    ok = await save_consultation(
+        session_id=req.session_id,
+        doctor_name=req.doctor_name,
+        specialty=req.specialty,
+        transcript=req.transcript,
+        clinical_data=req.clinical_note,
+        fhir_bundle=req.fhir_bundle,
+        fhir_quality=req.fhir_quality,
+        cds_alerts=req.cds_alerts,
+    )
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to save — Supabase may not be configured")
+    return {"success": True, "session_id": req.session_id}
 
 
 # Serve frontend static files in production (when built frontend is in ./static)

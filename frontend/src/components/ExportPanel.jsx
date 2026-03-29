@@ -1,4 +1,4 @@
-import { Download, FileText, Copy, Check, Printer } from 'lucide-react'
+import { Download, FileText, Copy, Check, Printer, Upload } from 'lucide-react'
 import { useState, useCallback } from 'react'
 
 function escapeHtml(str) {
@@ -133,8 +133,42 @@ function ExportButton({ onClick, icon: Icon, label, variant = 'default', success
   )
 }
 
-export default function ExportPanel({ clinicalNote, fhirBundle }) {
+export default function ExportPanel({ clinicalNote, fhirBundle, sessionId, user, specialty, transcript, fhirQuality, cdsAlerts }) {
+  const [uploadState, setUploadState] = useState('idle') // idle | loading | done | error
+
   if (!clinicalNote && !fhirBundle) return null
+
+  const handleUpload = useCallback(async () => {
+    setUploadState('loading')
+    try {
+      const base = import.meta.env.VITE_API_URL || ''
+      const res = await fetch(`${base}/api/upload-consultation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          doctor_name: user?.name || '',
+          doctor_id: user?.doctorId || '',
+          hospital: user?.hospital || '',
+          patient_name: user?.patientName || '',
+          specialty: specialty || 'general',
+          transcript: transcript || '',
+          clinical_note: clinicalNote,
+          fhir_bundle: fhirBundle,
+          fhir_quality: fhirQuality,
+          cds_alerts: cdsAlerts,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.detail || 'Upload failed')
+      }
+      setUploadState('done')
+    } catch {
+      setUploadState('error')
+      setTimeout(() => setUploadState('idle'), 3000)
+    }
+  }, [sessionId, user, specialty, transcript, clinicalNote, fhirBundle, fhirQuality, cdsAlerts])
 
   const handleCopySummary = useCallback(async () => {
     if (!clinicalNote) return
@@ -172,6 +206,29 @@ export default function ExportPanel({ clinicalNote, fhirBundle }) {
           label="Copy Summary"
           successLabel="Copied"
         />
+      )}
+      {(clinicalNote || fhirBundle) && (
+        <button
+          onClick={handleUpload}
+          disabled={uploadState === 'loading' || uploadState === 'done'}
+          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 border flex-1 sm:flex-initial ${
+            uploadState === 'done'
+              ? 'border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30'
+              : uploadState === 'error'
+              ? 'border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30'
+              : 'border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30'
+          }`}
+        >
+          {uploadState === 'loading' ? (
+            <><span className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" /> Uploading...</>
+          ) : uploadState === 'done' ? (
+            <><Check className="w-3.5 h-3.5" /> Uploaded</>
+          ) : uploadState === 'error' ? (
+            <><Upload className="w-3.5 h-3.5" /> Failed — Retry</>
+          ) : (
+            <><Upload className="w-3.5 h-3.5" /> Upload to Cloud</>
+          )}
+        </button>
       )}
       </div>
     </div>
