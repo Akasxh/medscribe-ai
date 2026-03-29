@@ -18,7 +18,7 @@ export default function LiveTranscript({ transcript, interimText, isRecording })
   }, [transcript.length, interimText])
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+    <div className="card !p-0">
       {/* Header */}
       <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
         <div className="flex items-center gap-2">

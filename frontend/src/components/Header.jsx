@@ -64,7 +64,7 @@ export default function Header({ user, onLogout }) {
             <InstallButton />
 
             {/* ABDM-Ready badge */}
-            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold">
+            <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[9px] sm:text-[10px] font-semibold">
               <ShieldCheck className="w-3 h-3" />
               ABDM-Ready
             </span>

@@ -148,7 +148,7 @@ export default function ClinicalNudges({ clinicalNote }) {
   if (!clinicalNote) return null
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+    <div className="card !p-0">
       {/* Header */}
       <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
         <Lightbulb className="w-4 h-4 text-amber-500" />
