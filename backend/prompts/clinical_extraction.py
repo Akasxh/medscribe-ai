@@ -26,7 +26,8 @@ Return a JSON object with exactly these fields:
     "bp": "string or null (e.g. '130/80 mmHg')",
     "pulse": "string or null (e.g. '88 bpm')",
     "spo2": "string or null (e.g. '98%')",
-    "weight": "string or null (e.g. '70 kg')"
+    "weight": "string or null (e.g. '70 kg')",
+    "respiratory_rate": "string or null (e.g. '18/min')"
   },
   "diagnosis": [
     {
@@ -194,20 +195,20 @@ Return a JSON object with exactly these fields:
    - "nebulization karo" → Levosalbutamol + Budesonide (for respiratory distress)
    - Always try to identify the exact drug and dosage from context clues in the conversation
    - If exact drug cannot be determined, note the category (e.g., "antihypertensive") and mark the specific drug as needing confirmation
-6. **ICD-10 codes**: Assign appropriate ICD-10 codes. Common ones:
+5. **ICD-10 codes**: Assign appropriate ICD-10 codes. Common ones:
    - Fever: R50.9, Common Cold: J00, URTI: J06.9, Cough: R05
    - Headache: R51, Abdominal Pain: R10.9, Diarrhea: K59.1
    - Type 2 Diabetes: E11.9, Hypertension: I10, Asthma: J45.9
    - UTI: N39.0, Lower Back Pain: M54.5, Viral Fever: B34.9
    - Dengue: A90, Typhoid: A01.0, Malaria: B54, Pneumonia: J18.9
-7. **Differential diagnosis**: For each primary diagnosis, suggest 2-3 differential diagnoses with likelihood, supporting evidence, and distinguishing tests.
-8. **Risk factors and recommended tests**: Identify risk factors and suggest relevant diagnostic tests.
-9. **Do not hallucinate**: If information is not in the transcript, use null for strings and empty arrays [] for lists. Do not invent symptoms, vitals, or diagnoses.
-10. **Complete extraction**: You will receive the COMPLETE conversation transcript. Extract ALL clinical information mentioned anywhere in the conversation. Do not miss any medications, symptoms, diagnoses, or vitals mentioned at any point.
-11. **clinical_notes**: Write a professional, well-formatted English clinical note suitable for medical records.
-12. **Short or unclear transcripts**: If the transcript is very short, incomplete, or unclear, extract whatever you can. Use null for missing fields and empty arrays for missing lists. Always return valid JSON matching the schema — never return an error message or explanation instead of the JSON.
-13. **Always return the full schema**: Even if no useful information can be extracted, return the complete JSON structure with null values and empty arrays. Never omit fields.
-14. **Citation guidelines**: For each diagnosis, cite 1-3 relevant guidelines from:
+6. **Differential diagnosis**: For each primary diagnosis, suggest 2-3 differential diagnoses with likelihood, supporting evidence, and distinguishing tests.
+7. **Risk factors and recommended tests**: Identify risk factors and suggest relevant diagnostic tests.
+8. **Do not hallucinate**: If information is not in the transcript, use null for strings and empty arrays [] for lists. Do not invent symptoms, vitals, or diagnoses.
+9. **Complete extraction**: You will receive the COMPLETE conversation transcript. Extract ALL clinical information mentioned anywhere in the conversation. Do not miss any medications, symptoms, diagnoses, or vitals mentioned at any point.
+10. **clinical_notes**: Write a professional, well-formatted English clinical note suitable for medical records.
+11. **Short or unclear transcripts**: If the transcript is very short, incomplete, or unclear, extract whatever you can. Use null for missing fields and empty arrays for missing lists. Always return valid JSON matching the schema — never return an error message or explanation instead of the JSON.
+12. **Always return the full schema**: Even if no useful information can be extracted, return the complete JSON structure with null values and empty arrays. Never omit fields.
+13. **Citation guidelines**: For each diagnosis, cite 1-3 relevant guidelines from:
     - ICMR Standard Treatment Workflows (STW)
     - WHO Clinical Guidelines
     - API (Association of Physicians of India) Medicine Update
@@ -215,7 +216,7 @@ Return a JSON object with exactly these fields:
     - RSSDI Guidelines (diabetes)
     - RNTCP (tuberculosis)
     Never invent citations. Use empty array if uncertain.
-15. **Evidence fields**: Populate evidence_basis with specific transcript findings (symptoms, vitals, history) that support the diagnosis. Populate clinical_reasoning with the inferential step connecting evidence to diagnosis.
+14. **Evidence fields**: Populate evidence_basis with specific transcript findings (symptoms, vitals, history) that support the diagnosis. Populate clinical_reasoning with the inferential step connecting evidence to diagnosis.
 """
 
 USER_PROMPT_TEMPLATE = """## Transcript
