@@ -584,6 +584,8 @@ async def _process_and_send(
 @router.get("/api/rx/{session_id}")
 async def get_prescription(session_id: str):
     """Get prescription data for a session (for QR code scanning)."""
+    if not UUID_PATTERN.match(session_id):
+        raise HTTPException(status_code=400, detail="Invalid session ID format")
     session = sessions_store.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -603,6 +605,8 @@ async def view_prescription_page(
     clinic: str = Query(default="", description="Clinic name"),
 ):
     """Serve a human-readable prescription page for QR code scans."""
+    if not UUID_PATTERN.match(session_id):
+        raise HTTPException(status_code=400, detail="Invalid session ID format")
     session = sessions_store.get(session_id)
 
     if not session or not session.clinical_note:
