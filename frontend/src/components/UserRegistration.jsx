@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Activity, User, Building2, Hash } from 'lucide-react'
 
-export default function UserRegistration({ onRegister }) {
+export default function UserRegistration({ onRegister, onAdminLogin }) {
   const [name, setName] = useState('')
   const [doctorId, setDoctorId] = useState('')
   const [hospital, setHospital] = useState('')
@@ -162,13 +162,12 @@ export default function UserRegistration({ onRegister }) {
 
         {/* Footer */}
         <div className="text-center mt-6 space-y-1">
-          <a
-            href="#admin-login"
-            onClick={() => window.location.reload()}
+          <button
+            onClick={onAdminLogin}
             className="text-[11px] text-blue-500 hover:text-blue-600 dark:text-blue-400 underline"
           >
             Admin Login
-          </a>
+          </button>
           <p className="text-[10px] text-slate-400 dark:text-slate-600">
             HACKMATRIX 2.0 — Jilo Health x NJACK IIT Patna
           </p>

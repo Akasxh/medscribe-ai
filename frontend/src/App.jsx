@@ -205,7 +205,7 @@ export default function App() {
 
   // Show registration screen if no user is logged in
   if (!user) {
-    return <UserRegistration onRegister={handleRegister} />
+    return <UserRegistration onRegister={handleRegister} onAdminLogin={() => setPage('admin-login')} />
   }
 
   return (
