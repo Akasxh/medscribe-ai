@@ -7,10 +7,10 @@
 [![HACKMATRIX 2.0](https://img.shields.io/badge/HACKMATRIX_2.0-Jilo_Health_×_NJACK_IIT_Patna-2563eb?style=for-the-badge)](https://hackathon.jilohealth.com/)
 [![FHIR R4](https://img.shields.io/badge/FHIR-R4_Compliant-059669?style=for-the-badge)](https://hl7.org/fhir/)
 [![ABDM](https://img.shields.io/badge/ABDM-NRCES_Ready-10b981?style=for-the-badge)](https://abdm.gov.in/)
-[![Languages](https://img.shields.io/badge/Languages-10_Indian-f59e0b?style=for-the-badge)]()
+[![Sarvam AI](https://img.shields.io/badge/STT-Sarvam_AI_Saaras_v3-8b5cf6?style=for-the-badge)](https://sarvam.ai/)
 [![Tests](https://img.shields.io/badge/Tests-65_Passing-22c55e?style=for-the-badge)]()
 
-A doctor opens the app, speaks with their patient in Hindi, English, or any of 10 Indian languages, and structured clinical notes + FHIR R4 resources + drug safety alerts appear in real-time.
+A doctor opens the app, speaks with their patient in Hindi, English, or Tamil (powered by **Sarvam AI Saaras v3** with code-mixing), and structured clinical notes + FHIR R4 resources + drug safety alerts appear in real-time.
 
 ### **~45 seconds** vs **~10 minutes** for manual documentation
 
@@ -28,7 +28,7 @@ Indian doctors spend **3-4 hours daily** on clinical documentation. Existing sol
 
 | Step | What Happens |
 |:----:|-------------|
-| **1. Speak** | Doctor speaks naturally with patient -- Hindi, English, Tamil, Telugu, Bengali, or code-mixed |
+| **1. Speak** | Doctor speaks naturally with patient -- Hindi, English, Tamil, or code-mixed (Sarvam AI STT) |
 | **2. Extract** | Gemini 2.5 Flash extracts structured clinical entities in real-time |
 | **3. Document** | FHIR R4 clinical notes, digital prescription, and QR code appear instantly |
 | **4. Protect** | CDS engine checks drug interactions, allergies, dosages -- safety alerts fire immediately |
@@ -37,7 +37,7 @@ Indian doctors spend **3-4 hours daily** on clinical documentation. Existing sol
 
 ## Indian Drug Ecosystem -- A Key Differentiator
 
-No other AI scribe understands the Indian pharmaceutical landscape. MedScribe AI maps **75+ Indian drug brand names** to their international generic equivalents, complete with RxNorm coding and affordable alternatives.
+No other AI scribe understands the Indian pharmaceutical landscape. MedScribe AI maps **74 Indian drug brand names** to their international generic equivalents, complete with RxNorm coding and affordable alternatives.
 
 ### Brand-to-Generic Mapping with Indian Context
 
@@ -81,6 +81,20 @@ No other AI scribe understands the Indian pharmaceutical landscape. MedScribe AI
 |:-:|:-:|
 | ![Active](docs/screenshots/04-active-session.png) | ![Demo](docs/screenshots/05-demo-running.png) |
 
+### Admin Dashboard
+
+| Login | Role-Based Auth |
+|:-:|:-:|
+| ![Login](docs/screenshots/01-login-page.png) | ![Doctor Sign In](docs/screenshots/02-doctor-signin.png) |
+
+The admin dashboard features:
+- **KPI Cards** — total consultations, active doctors, avg safety score, FHIR grade A%, prescriptions
+- **FilterBar** — search by patient/doctor, filter by specialty, date range, status
+- **Patient List** — sortable consultation history with status badges
+- **Consultation Detail** — full clinical note, FHIR viewer, CDS alerts, export
+- **Analytics** — consultations/day, top diagnoses, specialty distribution, drug frequency charts
+- **Export** — CSV and JSON download of filtered data
+
 ---
 
 ## Features
@@ -90,9 +104,9 @@ No other AI scribe understands the Indian pharmaceutical landscape. MedScribe AI
 <td width="50%">
 
 ### Core Intelligence
-- **10-language speech recognition** -- Hindi, English, Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, Malayalam + code-mixing
-- **Real-time clinical extraction** -- structured notes from natural doctor-patient conversation
-- **75+ Indian drug brand mappings** -- Dolo, Combiflam, Glycomet, Ecosprin, Telma, and more to generics with RxNorm coding
+- **Sarvam AI Saaras v3 STT** -- Hindi, English, Tamil with code-mixing mode (server-side, all browsers)
+- **Real-time clinical extraction** -- Gemini 2.5 Flash extracts structured notes from natural conversation
+- **74 Indian drug brand mappings** -- Dolo, Combiflam, Glycomet, Ecosprin, Telma, and more to generics with RxNorm coding
 - **Drug alternatives modal** -- click any medication to see alternatives, schedule classification, Jan Aushadhi generics
 - **Differential diagnosis** -- AI suggests 2-3 alternatives with supporting evidence and distinguishing tests
 - **Clinical nudges** -- real-time prompts for missing vitals, incomplete history, recommended tests
@@ -104,11 +118,11 @@ No other AI scribe understands the Indian pharmaceutical landscape. MedScribe AI
 
 ### Clinical Safety
 - **16 drug interaction rules** -- Aspirin+NSAID, Metformin+contrast, ACE+ARB, SSRI+NSAID, and more
-- **Allergy cross-reactivity** -- Penicillin-Cephalosporin, Sulfa drug, NSAID cross-reactivity detection
+- **4 allergy cross-reactivity rules** -- Penicillin-Cephalosporin, Penicillin-Amoxicillin, Sulfa drug, NSAID cross-reactivity detection
 - **Dosage validation** -- 10 dosage limit checks against known therapeutic ranges
 - **Patient safety score** -- real-time composite score (Safe / Caution / Warning / Critical) displayed prominently
 - **Consent recording** -- DPDPA-compliant consent banner with session-level tracking
-- **AES-128-CBC encryption** -- all clinical data encrypted at rest with Fernet (HMAC-SHA256 integrity)
+- **AES-128-CBC encryption** -- Fernet encryption service available for clinical data at rest (HMAC-SHA256 integrity)
 - **Security headers** -- CSP, HSTS, X-Frame-Options DENY, XSS protection, Permissions-Policy
 - **Input sanitization** -- HTML escaping, path traversal prevention, transcript size caps, hash-based deduplication
 
@@ -120,7 +134,7 @@ No other AI scribe understands the Indian pharmaceutical landscape. MedScribe AI
 ### FHIR R4 Compliance
 - **ABDM NRCES profiles** -- aligned with Ayushman Bharat Digital Mission standards
 - **ABHA ID integration** -- optional ABHA number linkage for national health records
-- **8 FHIR resource types** -- Patient, Encounter, Condition, Observation, MedicationRequest, AllergyIntolerance, CarePlan, ServiceRequest
+- **12 FHIR resource types** -- Patient, Practitioner, Organization, Encounter, Condition, Observation, MedicationRequest, AllergyIntolerance, CarePlan, ServiceRequest, DetectedIssue, AuditEvent
 - **FHIR Document Bundle** -- Composition resource linking all resources per consultation
 - **Terminology coding** -- ICD-10-CM, SNOMED CT, LOINC, RxNorm with proper system URIs
 - **Quality scoring** -- automated Grade A-D compliance score checking completeness, coding, and references
@@ -132,13 +146,14 @@ No other AI scribe understands the Indian pharmaceutical landscape. MedScribe AI
 
 ### Admin & Analytics
 - **Doctor registration** -- name, email, hospital, doctor ID with Supabase auth
-- **Role-based admin dashboard** -- separate dashboard with patient list, consultation history
-- **Analytics charts** -- consultations per day, specialty distribution, language detection (Recharts)
-- **KPI cards** -- total consultations, average duration, safety score trends
+- **Role-based admin dashboard** -- separate dashboard at `/admin` with hospital-level oversight
+- **Filter bar** -- search by patient/doctor name, filter by specialty, date range, consultation status
+- **Analytics charts** -- consultations/day, top diagnoses, specialty distribution, drug frequency (Recharts)
+- **KPI cards** -- total consultations, active doctors, avg safety score, FHIR Grade A%, prescriptions
 - **Consultation detail view** -- full clinical note, FHIR resources, CDS alerts per session
-- **Supabase persistence** -- consultations stored in PostgreSQL via Supabase
-- **Export suite** -- print-ready clinical notes, FHIR JSON download, clipboard copy
-- **Consultation summary** -- shareable summary card with key findings
+- **Supabase persistence** -- consultations, clinical notes, FHIR bundles, prescriptions in PostgreSQL
+- **Export suite** -- print-ready clinical notes, FHIR JSON download, CSV export, clipboard copy, WhatsApp share
+- **Consultation summary** -- shareable summary card with key findings and time-saved metric
 
 </td>
 </tr>
@@ -151,28 +166,29 @@ No other AI scribe understands the Indian pharmaceutical landscape. MedScribe AI
 ```mermaid
 graph LR
     subgraph Client["Frontend (React PWA)"]
-        MIC["Web Speech API<br/>10 Languages"] --> TR[Live Transcript]
+        MIC["Microphone"] --> TR[Live Transcript]
         TR --> UI["Clinical Note + FHIR + Rx"]
-        UI --> ADMIN["Admin Dashboard<br/>+ Analytics"]
+        UI --> ADMIN["Admin Dashboard<br/>+ Analytics + Filters"]
     end
 
     subgraph Server["Backend (FastAPI)"]
+        SAR["Sarvam AI<br/>Saaras v3 STT"]
         WS[WebSocket]
         GEM["Gemini 2.5 Flash"]
         CDS["CDS Engine<br/>16 Interaction Rules"]
         FHIR["FHIR R4 Generator<br/>ABDM NRCES"]
-        DRUG["Drug Reference<br/>75+ Indian Brands"]
-        ENC["AES Encryption"]
+        DRUG["Drug Reference<br/>74 Indian Brands"]
         SUPA["Supabase<br/>PostgreSQL"]
     end
 
-    MIC -->|transcript stream| WS
+    MIC -->|audio chunks| SAR
+    SAR -->|transcript| TR
+    TR -->|transcript stream| WS
     WS --> GEM
     GEM -->|structured JSON| CDS
     GEM --> FHIR
     CDS -->|safety alerts| UI
     FHIR -->|FHIR bundle| UI
-    ENC --> FHIR
     DRUG --> CDS
     WS --> SUPA
 
@@ -183,14 +199,17 @@ graph LR
 ```mermaid
 sequenceDiagram
     actor D as Doctor
-    participant B as Web Speech API
+    participant B as Browser Mic
+    participant SAR as Sarvam AI STT
     participant WS as WebSocket
     participant G as Gemini 2.5 Flash
     participant CDS as CDS Engine
     participant F as FHIR Generator
     participant S as Supabase
 
-    D->>B: Speaks with patient (Hindi/English/Regional)
+    D->>B: Speaks with patient (Hindi/English/Tamil)
+    B->>SAR: Audio chunks (WebM/Opus)
+    SAR->>B: Transcript (codemix mode)
     B->>WS: Transcript stream
     WS->>G: Extract clinical entities
     G-->>WS: Structured JSON
@@ -206,7 +225,7 @@ sequenceDiagram
 
 ## Security & Data Encryption
 
-All clinical data is encrypted at rest using **Fernet (AES-128-CBC + HMAC-SHA256)**. Patient names, diagnoses, medications, and vitals are **never** stored or transmitted in plaintext.
+An encryption service using **Fernet (AES-128-CBC + HMAC-SHA256)** is available for clinical data at rest. All data in transit is protected via TLS. Security headers (CSP, HSTS, X-Frame-Options) are applied to all responses.
 
 <div align="center">
 <img src="docs/screenshots/encryption-demo.png" width="700" alt="Encryption Demo -- plaintext vs ciphertext packet interception comparison"/>
@@ -220,7 +239,7 @@ All clinical data is encrypted at rest using **Fernet (AES-128-CBC + HMAC-SHA256
 | Wrong key rejection | Pass | Only the key holder can decrypt clinical data |
 | Unique IV per encryption | Pass | Same plaintext -- different ciphertext every time |
 
-**Additional protections:** Path traversal prevention, HTML escaping, session TTL eviction, transcript size caps, hash-based deduplication, specialty allowlist, DPDPA-compliant consent recording, and **61 automated tests**.
+**Additional protections:** Path traversal prevention, HTML escaping, session TTL eviction, transcript size caps, hash-based deduplication, specialty allowlist, DPDPA-compliant consent recording, and **65 automated tests**.
 
 ---
 
@@ -244,7 +263,7 @@ Four built-in scenarios -- no microphone needed:
 | **Frontend** | React 18, Vite, Tailwind CSS, Framer Motion, Recharts, react-router-dom |
 | **Backend** | Python FastAPI, WebSocket, Pydantic v2 |
 | **AI** | Google Gemini 2.5 Flash (structured JSON extraction) |
-| **Speech** | Web Speech API (browser-native, zero API cost, 10 languages) |
+| **Speech** | Sarvam AI Saaras v3 (server-side, codemix mode, Hindi + English + Tamil) |
 | **Data Standard** | FHIR R4 (HL7) -- ICD-10, SNOMED CT, LOINC, RxNorm |
 | **Database** | Supabase (PostgreSQL) |
 | **Auth** | Supabase Auth + role-based admin |
@@ -274,18 +293,20 @@ Open **http://localhost:5173** in Chrome/Edge (required for Web Speech API).
 Optional environment variables:
 
 ```bash
-# backend/.env
-GEMINI_API_KEY=your_key          # Required
-ENCRYPTION_KEY=your_secret       # Optional, auto-generated if missing
-SUPABASE_URL=your_url            # Optional, enables persistence
-SUPABASE_ANON_KEY=your_key       # Optional, enables persistence
+# .env (project root)
+GEMINI_API_KEY=your_key                # Required — AI extraction
+SARVAM_API_KEY=your_key                # Required — Hindi/English/Tamil STT
+SUPABASE_URL=your_url                  # Optional — enables persistence
+SUPABASE_ANON_KEY=your_key             # Optional — enables frontend auth
+SUPABASE_SERVICE_ROLE_KEY=your_key     # Optional — enables admin + persistence
+ENCRYPTION_KEY=your_secret             # Optional — enables at-rest encryption
 ```
 
 ---
 
 ## Test Results
 
-**61 tests passing** across 7 test modules:
+**65 tests passing** across 7 test modules:
 
 ```
 backend/tests/

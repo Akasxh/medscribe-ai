@@ -306,11 +306,7 @@ body {
   animation: fade-in-word 0.15s ease-in;
 }
 
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
+/* ─── Skeleton shimmer (uses Tailwind keyframes) ─── */
 .skeleton {
   background: linear-gradient(90deg, var(--color-surface-2) 25%, var(--color-border-subtle) 37%, var(--color-surface-2) 63%);
   background-size: 400% 100%;
@@ -348,7 +344,6 @@ body {
   .tab-bar-item {
     flex: 1;
     padding: 8px 12px;
-    min-height: 48px;
     border-radius: 8px;
     font-size: 13px;
     font-weight: 500;

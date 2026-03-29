@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LogOut, LayoutDashboard, RefreshCw, Download, Activity, UserCheck, Clock } from 'lucide-react'
-import FilterBar, { DEFAULT_FILTERS } from '../components/admin/FilterBar'
 import KPICards from '../components/admin/KPICards'
 import PatientList from '../components/admin/PatientList'
 import ConsultationDetail from '../components/admin/ConsultationDetail'
@@ -81,22 +80,14 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
   const [exportOpen, setExportOpen] = useState(false)
-  const [filters, setFilters] = useState(DEFAULT_FILTERS)
 
   const fetchSessions = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams()
-      if (filters.doctor) params.set('doctor_name', filters.doctor)
-      if (filters.dateFrom) params.set('from_date', filters.dateFrom)
-      if (filters.dateTo) params.set('to_date', filters.dateTo)
-      if (filters.specialty) params.set('specialty', filters.specialty)
-      const qs = params.toString()
-      const suffix = qs ? `?${qs}` : ''
-      let res = await fetch(`${API_BASE}/api/admin/consultations${suffix}`)
+      let res = await fetch(`${API_BASE}/api/admin/consultations`)
       if (!res.ok) {
-        res = await fetch(`${API_BASE}/api/sessions${suffix}`)
+        res = await fetch(`${API_BASE}/api/sessions`)
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
@@ -106,42 +97,11 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [filters.doctor, filters.dateFrom, filters.dateTo, filters.specialty])
+  }, [])
 
   useEffect(() => {
     fetchSessions()
   }, [fetchSessions])
-
-  useEffect(() => {
-    const t = setTimeout(() => fetchSessions(), 300)
-    return () => clearTimeout(t)
-  }, [filters.doctor, filters.dateFrom, filters.dateTo, filters.specialty])
-
-  const filteredSessions = useMemo(() => {
-    let list = sessions
-    if (filters.status !== 'all') {
-      list = list.filter(s => s.status === filters.status)
-    }
-    if (filters.search.trim()) {
-      const q = filters.search.toLowerCase()
-      list = list.filter(s => {
-        const name = (s.patient_name || s.clinical_note?.patient_info?.name || '').toLowerCase()
-        const complaint = (s.clinical_note?.chief_complaint || '').toLowerCase()
-        const doctor = (s.doctor_name || '').toLowerCase()
-        return name.includes(q) || complaint.includes(q) || doctor.includes(q) || s.id.toLowerCase().includes(q)
-      })
-    }
-    return list
-  }, [sessions, filters.search, filters.status])
-
-  const doctors = useMemo(() =>
-    [...new Set(sessions.map(s => s.doctor_name).filter(Boolean))].sort(),
-    [sessions]
-  )
-  const specialtyList = useMemo(() =>
-    [...new Set(sessions.map(s => s.specialty).filter(Boolean))].sort(),
-    [sessions]
-  )
 
   const handleLogout = useCallback(async () => {
     await signOut().catch(() => {})
@@ -149,12 +109,12 @@ export default function AdminDashboard() {
     navigate('/login')
   }, [navigate, signOut])
 
-  const selectedSession = filteredSessions.find(s => s.id === selectedId) || null
+  const selectedSession = sessions.find(s => s.id === selectedId) || null
 
   // Doctor activity table data
   const doctorActivity = useMemo(() => {
     const map = {}
-    filteredSessions.forEach(s => {
+    sessions.forEach(s => {
       const name = s.doctor_name || s.clinical_note?.doctor_name || 'Unknown'
       if (!map[name]) {
         map[name] = { name, consultations: 0, lastActive: null }
@@ -166,7 +126,7 @@ export default function AdminDashboard() {
       }
     })
     return Object.values(map).sort((a, b) => b.consultations - a.consultations)
-  }, [filteredSessions])
+  }, [sessions])
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
@@ -212,13 +172,13 @@ export default function AdminDashboard() {
                   <div className="fixed inset-0 z-40" onClick={() => setExportOpen(false)} />
                   <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50">
                     <button
-                      onClick={() => { exportCSV(filteredSessions); setExportOpen(false) }}
+                      onClick={() => { exportCSV(sessions); setExportOpen(false) }}
                       className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                     >
                       Download CSV
                     </button>
                     <button
-                      onClick={() => { exportJSON(filteredSessions); setExportOpen(false) }}
+                      onClick={() => { exportJSON(sessions); setExportOpen(false) }}
                       className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                     >
                       Download JSON
@@ -277,23 +237,14 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <>
-            {/* Filters */}
-            <FilterBar
-              filters={filters}
-              doctors={doctors}
-              specialties={specialtyList}
-              onChange={setFilters}
-              onClear={() => setFilters(DEFAULT_FILTERS)}
-            />
-
             {/* KPI Cards */}
-            <KPICards sessions={filteredSessions} />
+            <KPICards sessions={sessions} />
 
             {/* Two-column: Patient list + Detail */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
               <div className="lg:col-span-2">
                 <PatientList
-                  sessions={filteredSessions}
+                  sessions={sessions}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
                 />
@@ -306,7 +257,7 @@ export default function AdminDashboard() {
             {/* Analytics */}
             <div>
               <h2 className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-3">Analytics</h2>
-              <AnalyticsPanel sessions={filteredSessions} />
+              <AnalyticsPanel sessions={sessions} />
             </div>
 
             {/* Doctor Activity */}

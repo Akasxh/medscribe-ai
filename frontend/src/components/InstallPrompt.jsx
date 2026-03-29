@@ -42,7 +42,7 @@ export function InstallButton({ className = '' }) {
   return (
     <button
       onClick={install}
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 min-h-[44px] text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors ${className}`}
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors ${className}`}
       title="Install MedScribe AI as an app"
     >
       <Download className="w-3.5 h-3.5" />

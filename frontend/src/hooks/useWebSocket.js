@@ -24,7 +24,6 @@ export default function useWebSocket(sessionId) {
   const prevSessionRef = useRef(sessionId)
   useEffect(() => {
     if (prevSessionRef.current !== sessionId) {
-      disconnect()
       prevSessionRef.current = sessionId
       setClinicalNote(null)
       setFhirBundle(null)
@@ -36,7 +35,7 @@ export default function useWebSocket(sessionId) {
       setTotalTranscriptLength(0)
       reconnectAttemptsRef.current = 0
     }
-  }, [sessionId, disconnect])
+  }, [sessionId])
 
   const connect = useCallback(() => {
     if (!sessionId) return

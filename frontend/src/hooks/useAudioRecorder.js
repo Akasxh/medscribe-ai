@@ -348,9 +348,9 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
 
   /** Stop browser-native recording. */
   const stopBrowserRecording = useCallback(() => {
-    isRecordingRef.current = false
-    setIsRecording(false)
     if (recognitionRef.current) {
+      isRecordingRef.current = false
+      setIsRecording(false)
       recognitionRef.current.stop()
       recognitionRef.current = null
     }

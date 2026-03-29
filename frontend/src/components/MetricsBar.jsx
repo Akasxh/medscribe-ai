@@ -7,7 +7,7 @@ export default function MetricsBar({ elapsed, wordCount, resourceCount, processi
   const formatTime = (sec) => {
     if (sec <= 0) return '--'
     const m = Math.floor(sec / 60)
-    const s = Math.floor(sec % 60)
+    const s = sec % 60
     return m > 0 ? `${m}m ${s}s` : `${s}s`
   }
 
