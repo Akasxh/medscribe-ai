@@ -14,6 +14,7 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -109,6 +110,21 @@ async def health_check():
             "encryption": True,
         },
     }
+
+
+class AdminLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/api/admin/login")
+async def admin_login(req: AdminLoginRequest):
+    """Simple admin login — checks against ADMIN_EMAIL/ADMIN_PASSWORD env vars."""
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@medscribe.ai")
+    admin_password = os.getenv("ADMIN_PASSWORD", "medscribe2026")
+    if req.email == admin_email and req.password == admin_password:
+        return {"email": req.email, "role": "admin", "token": "admin-session"}
+    raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
 # Serve frontend static files in production (when built frontend is in ./static)

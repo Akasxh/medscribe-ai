@@ -20,6 +20,7 @@ import useAudioRecorder from './hooks/useAudioRecorder'
 import LanguageSelector from './components/LanguageSelector'
 import ToastContainer from './components/ToastNotification'
 import LandingHero from './components/LandingHero'
+import AdminLogin from './components/AdminLogin'
 import { FileJson, ClipboardList, Shield, RotateCcw } from 'lucide-react'
 
 // Lazy-loaded components (not needed on initial render)
@@ -70,6 +71,7 @@ function loadUser() {
 }
 
 export default function App() {
+  const [page, setPage] = useState(() => window.location.hash === '#admin-login' ? 'admin-login' : 'app')
   const [user, setUser] = useState(loadUser)
   const [sessionId, setSessionId] = useState(getOrCreateSessionId)
   const [transcriptLines, setTranscriptLines] = useState([])
@@ -82,6 +84,11 @@ export default function App() {
   const [useSarvam, setUseSarvam] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
   const hasStartedRef = useRef(false)
+
+  // Show admin login page
+  if (page === 'admin-login') {
+    return <AdminLogin onBack={() => { window.location.hash = ''; setPage('app') }} />
+  }
   // Set-based dedup for all final transcripts (live + demo) — catches non-consecutive duplicates
   const seenFinalsRef = useRef(new Set())
 

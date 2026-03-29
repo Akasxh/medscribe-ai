@@ -161,9 +161,18 @@ export default function UserRegistration({ onRegister }) {
         </div>
 
         {/* Footer */}
-        <p className="text-center mt-6 text-[10px] text-slate-400 dark:text-slate-600">
-          HACKMATRIX 2.0 — Jilo Health x NJACK IIT Patna
-        </p>
+        <div className="text-center mt-6 space-y-1">
+          <a
+            href="#admin-login"
+            onClick={() => window.location.reload()}
+            className="text-[11px] text-blue-500 hover:text-blue-600 dark:text-blue-400 underline"
+          >
+            Admin Login
+          </a>
+          <p className="text-[10px] text-slate-400 dark:text-slate-600">
+            HACKMATRIX 2.0 — Jilo Health x NJACK IIT Patna
+          </p>
+        </div>
       </div>
     </div>
   )
