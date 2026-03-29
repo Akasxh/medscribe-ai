@@ -15,12 +15,20 @@ export default function UserRegistration({ onRegister }) {
       setError('Please enter your name')
       return
     }
+    if (!patientName.trim()) {
+      setError('Please enter the patient name')
+      return
+    }
+    if (!hospital.trim()) {
+      setError('Please enter hospital/clinic name')
+      return
+    }
 
     const user = {
       name: trimmed,
       doctorId: doctorId.trim() || null,
-      hospital: hospital.trim() || null,
-      patientName: patientName.trim() || null,
+      hospital: hospital.trim(),
+      patientName: patientName.trim(),
       registeredAt: new Date().toISOString(),
     }
 
@@ -93,8 +101,7 @@ export default function UserRegistration({ onRegister }) {
             {/* Hospital / Clinic */}
             <div>
               <label htmlFor="reg-hospital" className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
-                Hospital / Clinic Name
-                <span className="text-slate-400 font-normal ml-1">(optional)</span>
+                Hospital / Clinic Name <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -112,8 +119,7 @@ export default function UserRegistration({ onRegister }) {
             {/* Patient Name (optional - for this consultation) */}
             <div>
               <label htmlFor="reg-patient" className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
-                Patient Name
-                <span className="text-slate-400 font-normal ml-1">(for this consultation)</span>
+                Patient Name <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -122,7 +128,7 @@ export default function UserRegistration({ onRegister }) {
                   type="text"
                   value={patientName}
                   onChange={(e) => setPatientName(e.target.value)}
-                  placeholder="Patient's name (optional)"
+                  placeholder="Patient's full name"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                 />
               </div>

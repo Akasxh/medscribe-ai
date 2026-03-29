@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from models.schemas import Session, SessionStatus
 from routers.transcribe import sessions_store
 from services.learning_service import store_correction, get_correction_stats
-from services.supabase_service import get_client
+from services.supabase_service import get_client, save_consultation
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +69,46 @@ async def get_session(session_id: str):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
+
+
+# ── Upload consultation to Supabase ──────────────────────────
+
+class UploadRequest(BaseModel):
+    session_id: str
+    doctor_name: str = ""
+    hospital: str = ""
+    patient_name: str = ""
+    specialty: str = "general"
+    transcript: str = ""
+    clinical_note: dict | None = None
+    fhir_bundle: dict | None = None
+    fhir_quality: dict | None = None
+    cds_alerts: list | None = None
+
+
+@router.post("/upload")
+async def upload_consultation(req: UploadRequest):
+    """Manually upload a consultation to Supabase."""
+    # Inject patient_name and hospital into clinical_note for persistence
+    clinical_data = req.clinical_note
+    if clinical_data and req.patient_name:
+        if "patient_info" not in clinical_data or not clinical_data["patient_info"]:
+            clinical_data["patient_info"] = {}
+        clinical_data["patient_info"]["name"] = req.patient_name
+
+    ok = await save_consultation(
+        session_id=req.session_id,
+        doctor_name=req.doctor_name,
+        specialty=req.specialty,
+        transcript=req.transcript,
+        clinical_data=clinical_data,
+        fhir_bundle=req.fhir_bundle,
+        fhir_quality=req.fhir_quality,
+        cds_alerts=req.cds_alerts,
+    )
+    if ok:
+        return {"status": "saved", "session_id": req.session_id}
+    raise HTTPException(status_code=500, detail="Failed to save to database")
 
 
 # ── Admin endpoints ──────────────────────────────────────────
