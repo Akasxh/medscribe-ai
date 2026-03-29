@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 # Load reference data once at module level
-_icd10_code_to_name: dict[str, str] = {}
-_icd10_name_to_code: dict[str, str] = {}
+_icd10_codes: dict = {}
 _drug_reference: dict = {}
 _drug_brands_lower: dict[str, str] = {}
 _drug_generics_lower: dict[str, str] = {}
@@ -23,7 +22,7 @@ _loaded = False
 
 
 def _load_references() -> None:
-    global _loaded, _icd10_code_to_name, _icd10_name_to_code, _drug_reference, _drug_brands_lower, _drug_generics_lower
+    global _loaded, _icd10_codes, _drug_reference, _drug_brands_lower, _drug_generics_lower
     if _loaded:
         return
 
@@ -31,8 +30,10 @@ def _load_references() -> None:
     if icd10_path.exists():
         with open(icd10_path) as f:
             raw = json.load(f)
-            _icd10_code_to_name = {v: k for k, v in raw.items()}  # code -> name
-            _icd10_name_to_code = {k.lower(): v for k, v in raw.items()}  # name -> code
+            # Create reverse lookup: code -> condition name
+            _icd10_codes = {v: k for k, v in raw.items()}
+            # Also store condition -> code (lowercase for lookup)
+            _icd10_codes.update({k.lower(): v for k, v in raw.items()})
 
     drug_path = DATA_DIR / "drug_reference.json"
     if drug_path.exists():
@@ -68,19 +69,19 @@ def validate_clinical_data(clinical_data: dict) -> dict:
         condition = dx.get("condition") or ""
         total_count += 1
 
-        if code in _icd10_code_to_name:
+        if code in _icd10_codes:
             validated.append({
                 "field": f"diagnosis[{i}]",
                 "code": code,
                 "display": condition,
                 "status": "valid",
                 "source": "ICD-10-CM",
-                "reference_name": _icd10_code_to_name[code],
+                "reference_name": _icd10_codes[code],
             })
             valid_count += 1
         else:
             # Try to find correct code by condition name
-            suggestion = _icd10_name_to_code.get(condition.lower())
+            suggestion = _icd10_codes.get(condition.lower())
             entry = {
                 "field": f"diagnosis[{i}]",
                 "code": code,
@@ -101,7 +102,7 @@ def validate_clinical_data(clinical_data: dict) -> dict:
     for i, dd in enumerate(clinical_data.get("differential_diagnosis", [])):
         code = dd.get("icd10_code") or ""
         total_count += 1
-        if code in _icd10_code_to_name:
+        if code in _icd10_codes:
             validated.append({
                 "field": f"differential_diagnosis[{i}]",
                 "code": code,
@@ -128,12 +129,12 @@ def validate_clinical_data(clinical_data: dict) -> dict:
         # Fuzzy: check if any brand is contained in the name or vice versa
         else:
             for brand_lower in _drug_brands_lower:
-                if len(name) >= 4 and (brand_lower in name or name in brand_lower):
+                if brand_lower in name or name in brand_lower:
                     matched = True
                     break
             if not matched:
                 for gen_lower in _drug_generics_lower:
-                    if len(generic) >= 4 and (gen_lower in generic or generic in gen_lower):
+                    if gen_lower in generic or generic in gen_lower:
                         matched = True
                         break
 

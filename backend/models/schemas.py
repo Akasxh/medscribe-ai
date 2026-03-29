@@ -30,22 +30,13 @@ class Vitals(BaseModel):
     respiratory_rate: Optional[str] = None
 
 
-class DiagnosisCitation(BaseModel):
-    source: str = ""
-    section: Optional[str] = None
-    relevance: str = ""
-
-
 class Diagnosis(BaseModel):
     condition: Optional[str] = ""
     icd10_code: Optional[str] = ""
     certainty: Optional[str] = "suspected"
     confidence: Optional[float] = 0.0
-    evidence_basis: Optional[str] = ""
-    clinical_reasoning: Optional[str] = ""
-    citations: List[DiagnosisCitation] = []
 
-    @field_validator("condition", "icd10_code", "certainty", "evidence_basis", "clinical_reasoning", mode="before")
+    @field_validator("condition", "icd10_code", "certainty", mode="before")
     @classmethod
     def coerce_none_str(cls, v):
         return v if v is not None else ""
@@ -82,10 +73,8 @@ class DifferentialDiagnosis(BaseModel):
     confidence: Optional[float] = 0.0
     supporting_evidence: Optional[str] = ""
     distinguishing_tests: Optional[str] = ""
-    evidence_strength: Optional[str] = ""
-    citations: List[DiagnosisCitation] = []
 
-    @field_validator("condition", "icd10_code", "likelihood", "supporting_evidence", "distinguishing_tests", "evidence_strength", mode="before")
+    @field_validator("condition", "icd10_code", "likelihood", "supporting_evidence", "distinguishing_tests", mode="before")
     @classmethod
     def coerce_none_str(cls, v):
         return v if v is not None else ""
@@ -119,7 +108,6 @@ class ClinicalNote(BaseModel):
     recommended_tests: List[str] = []
     follow_up: Optional[str] = None
     clinical_notes: Optional[str] = ""
-    specialty_data: Optional[dict] = None
 
     @field_validator("chief_complaint", "history_of_present_illness", "clinical_notes", mode="before")
     @classmethod
@@ -133,14 +121,7 @@ class Session(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     transcript: str = ""
     clinical_note: Optional[ClinicalNote] = None
-    cds_alerts: list = Field(default_factory=list)
-    fhir_quality: Optional[dict] = None
     fhir_bundle: Optional[dict] = None
-    completed_at: Optional[datetime] = None
-    # SHA-256 hashes of normalised transcript segments already appended.
-    # Used to deduplicate re-sent finals caused by Web Speech API restarts or
-    # WebSocket reconnects.  Not persisted to disk; cleared only on new session.
-    seen_transcript_hashes: set[str] = Field(default_factory=set, exclude=True)
 
 
 class TranscriptMessage(BaseModel):

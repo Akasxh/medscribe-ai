@@ -1,12 +1,10 @@
 import asyncio
-import hashlib
 import html
 import json
 import logging
-import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
 
 from models.schemas import Session, SessionStatus, ClinicalNote
@@ -15,14 +13,10 @@ from services.fhir_service import FHIRBundleBuilder
 from services.cds_service import check_clinical_alerts
 from services.terminology_service import validate_clinical_data
 from services.stt_service import transcribe_audio, get_stt_status
-from services.supabase_service import persist_session as _persist_to_supabase
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# prevent fire-and-forget tasks from being GC'd before completion
-_background_tasks: set = set()
 
 # In-memory session store (shared with sessions router)
 # Imported by sessions.py as well
@@ -37,30 +31,15 @@ VALID_SPECIALTIES = {
     "dermatology", "psychiatry",
 }
 
-UUID_PATTERN = re.compile(
-    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-    re.IGNORECASE,
-)
-
 # Minimum transcript length worth sending to Gemini at all
 MIN_PROCESSABLE_LENGTH = 20
 
 
-def _segment_hash(text: str) -> str:
-    """Return a stable hash for a normalised transcript segment.
-
-    Normalisation: collapse runs of whitespace, lowercase, strip leading/
-    trailing whitespace.  This makes the dedup robust against minor
-    punctuation-level differences that the Web Speech API sometimes introduces
-    across restarts for the same spoken words.
-    """
-    normalised = " ".join(text.lower().split())
-    return hashlib.sha256(normalised.encode()).hexdigest()
-
-
 def _cleanup_sessions() -> None:
     """Remove expired sessions to prevent unbounded memory growth."""
-    now = datetime.now(timezone.utc)
+    if len(sessions_store) <= MAX_SESSIONS:
+        return
+    now = datetime.now()
     expired = [
         sid for sid, session in sessions_store.items()
         if (now - session.created_at).total_seconds() > SESSION_TTL_HOURS * 3600
@@ -91,11 +70,10 @@ async def transcribe_audio_endpoint(
 ):
     """Transcribe audio using Sarvam AI STT."""
     audio_bytes = await file.read()
-    content_type = file.content_type or "audio/webm"
-    transcript = await transcribe_audio(audio_bytes, language, content_type=content_type)
+    transcript = await transcribe_audio(audio_bytes, language)
     if transcript is not None:
         return {"transcript": transcript, "language": language}
-    raise HTTPException(status_code=502, detail="Transcription failed")
+    return {"error": "Transcription failed", "transcript": ""}
 
 
 @router.get("/api/stt/status")
@@ -106,12 +84,8 @@ async def stt_status():
 
 @router.websocket("/ws/transcribe/{session_id}")
 async def websocket_transcribe(websocket: WebSocket, session_id: str):
-    if not UUID_PATTERN.match(session_id):
-        await websocket.close(code=4000, reason="Invalid session ID format")
-        return
-
     await websocket.accept()
-    _cleanup_sessions()  # fast dict ops, no need for thread
+    _cleanup_sessions()
     logger.info("WebSocket connected for session %s", session_id)
 
     # Get or create session
@@ -120,7 +94,6 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
 
     session = sessions_store[session_id]
     specialty = "general"
-    doctor_name = ""
     abha_id = None
     fhir_builder = FHIRBundleBuilder()
     processing_lock = asyncio.Lock()
@@ -128,9 +101,6 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
     try:
         while True:
             raw = await websocket.receive_text()
-            if len(raw) > 65536:
-                await _send_error(websocket, "Message too large")
-                continue
             try:
                 message = json.loads(raw)
             except json.JSONDecodeError:
@@ -147,28 +117,6 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                     if len(session.transcript) > 100_000:
                         await _send_error(websocket, "Transcript limit reached (100KB)")
                         continue
-
-                    seg_hash = _segment_hash(text)
-                    if seg_hash in session.seen_transcript_hashes:
-                        # Duplicate segment — frontend re-sent due to WS reconnect
-                        # or Web Speech API restart.  Acknowledge with current
-                        # length so the frontend stays in sync; do not append.
-                        logger.debug(
-                            "Session %s: duplicate transcript segment ignored (hash=%s)",
-                            session_id,
-                            seg_hash[:12],
-                        )
-                        await websocket.send_json(
-                            {
-                                "type": "transcript_ack",
-                                "text": text,
-                                "total_length": len(session.transcript.strip()),
-                                "duplicate": True,
-                            }
-                        )
-                        continue
-
-                    session.seen_transcript_hashes.add(seg_hash)
                     session.transcript += " " + text
 
                     # Send acknowledgment (no auto-processing — extraction
@@ -203,15 +151,8 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                     }
                 )
 
-            elif msg_type == "doctor_info":
-                doctor_name = message.get("doctor_name", "")
-                await websocket.send_json({"type": "doctor_info_ack", "doctor_name": doctor_name})
-
             elif msg_type == "abha_id":
                 abha_id = message.get("abha_id")
-                if abha_id and not re.match(r'^\d{2}-\d{4}-\d{4}-\d{4}$', str(abha_id)):
-                    await _send_error(websocket, "Invalid ABHA ID format")
-                    continue
                 await websocket.send_json({"type": "abha_id_ack", "abha_id": abha_id})
 
             elif msg_type == "process":
@@ -258,7 +199,6 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                             len(full_text),
                         )
 
-                session.completed_at = datetime.now(timezone.utc)
                 session.status = SessionStatus.COMPLETED
                 sessions_store[session_id] = session
 
@@ -272,22 +212,22 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
 
             else:
                 await _send_error(
-                    websocket, f"Unknown message type: {msg_type[:50]}"
+                    websocket, f"Unknown message type: {msg_type}"
                 )
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected for session %s", session_id)
     except Exception as e:
         logger.error("WebSocket error for session %s: %s", session_id, e, exc_info=True)
-        await _send_error(websocket, "An internal error occurred.")
+        await _send_error(websocket, str(e))
 
 
 async def _send_error(websocket: WebSocket, message: str) -> None:
     """Send an error message to the frontend, swallowing send failures."""
     try:
         await websocket.send_json({"type": "error", "message": message})
-    except Exception as exc:
-        logger.debug("Could not send error to WebSocket: %s", exc)
+    except Exception:
+        pass
 
 
 def _calculate_fhir_quality(fhir_bundle: dict, clinical_data: dict) -> dict:
@@ -481,16 +421,10 @@ async def _process_and_send(
                             for item in val if item is not None
                         ]
                     elif val is None and key not in ("follow_up",):
-                        if key in ("vitals", "patient_info"):
-                            clinical_data[key] = {}
-                        else:
-                            clinical_data[key] = ""
+                        clinical_data[key] = "" if isinstance(val, str) or val is None else val
                 session.clinical_note = ClinicalNote(**clinical_data)
             except Exception as e2:
                 logger.error("Fallback ClinicalNote creation also failed: %s", e2)
-                await _send_error(websocket, "Failed to parse clinical data.")
-                await websocket.send_json({"type": "processing", "status": "completed"})
-                return
 
         # Run CDS checks and terminology validation concurrently (both
         # operate on clinical_data independently).  CDS results feed into
@@ -503,7 +437,6 @@ async def _process_and_send(
         except Exception as e:
             logger.error("CDS/terminology concurrent check failed: %s", e, exc_info=True)
             cds_alerts = []
-            await _send_error(websocket, "Safety checks encountered an error — prescribe with caution")
             terminology = {
                 "score_boost": 0,
                 "valid_count": 0,
@@ -518,7 +451,7 @@ async def _process_and_send(
             logger.error("FHIR bundle build failed: %s", e, exc_info=True)
             fhir_bundle = {
                 "resourceType": "Bundle",
-                "type": "document",
+                "type": "collection",
                 "entry": [],
             }
         session.fhir_bundle = fhir_bundle
@@ -552,10 +485,6 @@ async def _process_and_send(
                 else "D"
             )
 
-        # Persist CDS alerts and FHIR quality on session
-        session.cds_alerts = cds_alerts
-        session.fhir_quality = fhir_quality
-
         await websocket.send_json(
             {
                 "type": "fhir_bundle",
@@ -564,13 +493,14 @@ async def _process_and_send(
             }
         )
 
-        # Send CDS alerts to frontend (always send, even if empty, to clear stale alerts)
-        await websocket.send_json(
-            {
-                "type": "cds_alerts",
-                "data": cds_alerts,
-            }
-        )
+        # Send CDS alerts to frontend
+        if cds_alerts:
+            await websocket.send_json(
+                {
+                    "type": "cds_alerts",
+                    "data": cds_alerts,
+                }
+            )
 
         await websocket.send_json(
             {"type": "processing", "status": "completed"}
@@ -582,26 +512,6 @@ async def _process_and_send(
             len(cds_alerts),
         )
 
-        # Fire-and-forget: persist to Supabase (failure won't break WS)
-        try:
-            task = asyncio.create_task(
-                _persist_to_supabase(
-                    session_id=session.id,
-                    doctor_id=None,
-                    transcript=session.transcript,
-                    clinical_data=clinical_data,
-                    fhir_bundle=fhir_bundle,
-                    fhir_quality=fhir_quality,
-                    cds_alerts=cds_alerts,
-                    specialty=specialty,
-                    doctor_name=doctor_name,
-                )
-            )
-            _background_tasks.add(task)
-            task.add_done_callback(_background_tasks.discard)
-        except Exception as persist_exc:
-            logger.warning("Supabase persist_session task failed to start: %s", persist_exc)
-
     except Exception as e:
         logger.error("Processing error for session %s: %s", session.id, e, exc_info=True)
         await _send_error(websocket, "An error occurred during processing. Please try again.")
@@ -611,11 +521,9 @@ async def _process_and_send(
 @router.get("/api/rx/{session_id}")
 async def get_prescription(session_id: str):
     """Get prescription data for a session (for QR code scanning)."""
-    if not UUID_PATTERN.match(session_id):
-        raise HTTPException(status_code=400, detail="Invalid session ID format")
     session = sessions_store.get(session_id)
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        return {"error": "Session not found", "session_id": session_id}
     return {
         "session_id": session_id,
         "clinical_note": session.clinical_note.model_dump() if session.clinical_note else None,
@@ -625,15 +533,8 @@ async def get_prescription(session_id: str):
 
 
 @router.get("/rx/{session_id}", response_class=HTMLResponse)
-async def view_prescription_page(
-    session_id: str,
-    doctor: str = Query(default="", description="Doctor name"),
-    reg: str = Query(default="", description="Registration number"),
-    clinic: str = Query(default="", description="Clinic name"),
-):
+async def view_prescription_page(session_id: str):
     """Serve a human-readable prescription page for QR code scans."""
-    if not UUID_PATTERN.match(session_id):
-        raise HTTPException(status_code=400, detail="Invalid session ID format")
     session = sessions_store.get(session_id)
 
     if not session or not session.clinical_note:
@@ -667,12 +568,6 @@ async def view_prescription_page(
     patient_gender = html.escape(patient.get("gender") or "")
     date_str = html.escape(session.created_at.strftime("%d %b %Y, %I:%M %p") if session.created_at else "N/A")
 
-    # Doctor identity: prefer query params, fall back to clinical_data
-    clinical_raw = note.model_dump() if note else {}
-    doctor_name = html.escape(doctor or clinical_raw.get("doctor_name", "") or "")
-    reg_number = html.escape(reg or clinical_raw.get("registration_number", "") or "")
-    clinic_name = html.escape(clinic or clinical_raw.get("clinic_name", "") or "MedScribe AI Clinic")
-
     # Build medications HTML
     meds_html = ""
     if note.medications:
@@ -685,7 +580,7 @@ async def view_prescription_page(
             med_dur = html.escape(m.duration or "-")
             rows += f"""<tr>
               <td>{i}</td>
-              <td><a href="#" class="med-link" data-drug="{med_name}" onclick="showAlternatives(this);return false"><strong>{med_name}</strong></a><br><span class="generic">{med_generic}</span></td>
+              <td><strong>{med_name}</strong><br><span class="generic">{med_generic}</span></td>
               <td>{med_dosage}</td>
               <td>{med_freq}</td>
               <td>{med_dur}</td>
@@ -751,37 +646,8 @@ async def view_prescription_page(
     .allergy h3 {{ color: #dc2626; }}
     .allergy li {{ color: #991b1b; font-size: 0.875rem; }}
     .empty {{ color: #94a3b8; font-size: 0.875rem; font-style: italic; }}
-    .doctor-info {{ padding: 0.75rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 0.8rem; color: #334155; }}
-    .doctor-info .doc-name {{ font-weight: 600; font-size: 0.9rem; }}
-    .doctor-info .doc-meta {{ color: #64748b; font-size: 0.75rem; margin-top: 0.15rem; }}
-    .disclaimer {{ padding: 0.75rem 1.5rem; background: #fefce8; border-top: 1px solid #fde68a; text-align: center; font-size: 0.7rem; color: #92400e; font-weight: 500; }}
     .footer {{ padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; text-align: center; font-size: 0.7rem; color: #94a3b8; }}
-    .med-link {{ color: #2563eb; text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer; -webkit-tap-highlight-color: transparent; }}
-    .med-link:hover {{ color: #1d4ed8; text-decoration: underline solid; }}
-    .alt-overlay {{ position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; animation: fadeIn .15s ease; }}
-    @media (min-width: 480px) {{ .alt-overlay {{ align-items: center; }} }}
-    .alt-popup {{ background: white; border-radius: 16px 16px 0 0; width: 100%; max-width: 480px; max-height: 70vh; overflow-y: auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.12); animation: slideUp .2s ease; }}
-    @media (min-width: 480px) {{ .alt-popup {{ border-radius: 16px; }} }}
-    .alt-popup .popup-hdr {{ padding: 1rem 1.25rem 0.75rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-start; }}
-    .alt-popup .popup-hdr h2 {{ font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; }}
-    .alt-popup .popup-hdr .popup-sub {{ font-size: 0.75rem; color: #64748b; margin-top: 2px; }}
-    .alt-popup .popup-close {{ background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #94a3b8; padding: 4px 8px; border-radius: 8px; }}
-    .alt-popup .popup-close:hover {{ background: #f1f5f9; color: #475569; }}
-    .alt-popup .popup-body {{ padding: 0.75rem 1.25rem 1.25rem; }}
-    .alt-popup .alt-item {{ padding: 0.6rem 0; border-bottom: 1px solid #f1f5f9; }}
-    .alt-popup .alt-item:last-child {{ border: none; }}
-    .alt-popup .alt-brand {{ font-weight: 600; font-size: 0.875rem; color: #1e293b; }}
-    .alt-popup .alt-generic {{ font-size: 0.75rem; color: #64748b; margin-top: 1px; }}
-    .alt-popup .alt-cat {{ display: inline-block; font-size: 0.65rem; background: #eff6ff; color: #2563eb; padding: 1px 6px; border-radius: 4px; margin-top: 3px; font-weight: 500; }}
-    .alt-popup .popup-loading {{ padding: 2rem; text-align: center; color: #94a3b8; font-size: 0.875rem; }}
-    .alt-popup .popup-empty {{ padding: 1.5rem; text-align: center; color: #94a3b8; font-size: 0.875rem; }}
-    .alt-popup .popup-err {{ padding: 1.5rem; text-align: center; color: #dc2626; font-size: 0.875rem; }}
-    .alt-popup .drug-info {{ margin-bottom: 0.75rem; padding: 0.75rem; background: #f8fafc; border-radius: 8px; }}
-    .alt-popup .drug-info .di-label {{ font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; font-weight: 600; }}
-    .alt-popup .drug-info .di-val {{ font-size: 0.8rem; color: #334155; margin-top: 1px; }}
-    @keyframes fadeIn {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
-    @keyframes slideUp {{ from {{ transform: translateY(40px); opacity: 0; }} to {{ transform: translateY(0); opacity: 1; }} }}
-    @media print {{ .alt-overlay {{ display: none !important; }} body {{ background: white; padding: 0; }} .rx {{ box-shadow: none; border-radius: 0; }} }}
+    @media print {{ body {{ background: white; padding: 0; }} .rx {{ box-shadow: none; border-radius: 0; }} }}
   </style>
 </head>
 <body>
@@ -791,7 +657,6 @@ async def view_prescription_page(
       <p>Digital Prescription</p>
       <span class="badge">FHIR R4 Compliant</span>
     </div>
-    {'<div class="doctor-info">' + ('<div class="doc-name">' + doctor_name + '</div>' if doctor_name else '') + ('<div class="doc-meta">' + ' &bull; '.join(filter(None, [("Reg: " + reg_number) if reg_number else "", clinic_name])) + '</div>' if reg_number or clinic_name else '') + '</div>' if doctor_name or reg_number or clinic_name else ''}
     <div class="patient">
       <div>
         <div class="name">{patient_name}</div>
@@ -808,85 +673,10 @@ async def view_prescription_page(
       </div>
       {fu_html}
     </div>
-    <div class="disclaimer">
-      Digitally Generated &mdash; Not a substitute for physical prescription
-    </div>
     <div class="footer">
       Generated by MedScribe AI &mdash; Session {html.escape(session_id[:20])}...
     </div>
   </div>
-  <script>
-  function mk(tag, cls, text) {{ var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }}
-  function showAlternatives(el) {{
-    var drug = el.getAttribute('data-drug');
-    if (!drug) return;
-    var overlay = mk('div', 'alt-overlay');
-    var popup = mk('div', 'alt-popup');
-    var hdr = mk('div', 'popup-hdr');
-    var hdrLeft = mk('div');
-    hdrLeft.appendChild(mk('h2', '', drug));
-    var sub = mk('div', 'popup-sub', 'Looking up alternatives\u2026');
-    hdrLeft.appendChild(sub);
-    var closeBtn = mk('button', 'popup-close', '\u00d7');
-    closeBtn.onclick = function() {{ overlay.remove(); }};
-    hdr.appendChild(hdrLeft); hdr.appendChild(closeBtn);
-    popup.appendChild(hdr);
-    var body = mk('div', 'popup-body');
-    body.appendChild(mk('div', 'popup-loading', 'Loading\u2026'));
-    popup.appendChild(body);
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', function(e) {{ if (e.target === overlay) overlay.remove(); }});
-    fetch('/api/drugs/' + encodeURIComponent(drug) + '/alternatives')
-      .then(function(r) {{
-        if (!r.ok) throw new Error(String(r.status));
-        return r.json();
-      }})
-      .then(function(d) {{
-        sub.textContent = d.generic ? d.generic + (d.category ? ' \u2022 ' + d.category : '') : (d.category || 'Drug details');
-        body.replaceChildren();
-        if (d.dosage || d.use) {{
-          var info = mk('div', 'drug-info');
-          if (d.dosage) {{
-            var dg = mk('div');
-            dg.appendChild(mk('span', 'di-label', 'Dosage'));
-            dg.appendChild(mk('div', 'di-val', d.dosage));
-            info.appendChild(dg);
-          }}
-          if (d.use) {{
-            var us = mk('div');
-            us.style.marginTop = '6px';
-            us.appendChild(mk('span', 'di-label', 'Common Use'));
-            us.appendChild(mk('div', 'di-val', d.use));
-            info.appendChild(us);
-          }}
-          body.appendChild(info);
-        }}
-        if (d.alternatives && d.alternatives.length > 0) {{
-          var altHdr = mk('div', '', 'Alternative Brands');
-          altHdr.style.cssText = 'margin-bottom:6px;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.04em;color:#94a3b8;font-weight:600';
-          body.appendChild(altHdr);
-          d.alternatives.forEach(function(a) {{
-            var item = mk('div', 'alt-item');
-            item.appendChild(mk('div', 'alt-brand', a.brand));
-            if (a.generic) item.appendChild(mk('div', 'alt-generic', a.generic + (a.dosage ? ' \u2022 ' + a.dosage : '')));
-            if (a.category) item.appendChild(mk('span', 'alt-cat', a.category));
-            body.appendChild(item);
-          }});
-        }} else {{
-          body.appendChild(mk('div', 'popup-empty', 'No alternative brands found in database.'));
-        }}
-      }})
-      .catch(function(err) {{
-        body.replaceChildren();
-        if (err.message === '404') {{
-          body.appendChild(mk('div', 'popup-empty', 'Drug not found in reference database.'));
-        }} else {{
-          body.appendChild(mk('div', 'popup-err', 'Could not load alternatives. Try again.'));
-        }}
-      }});
-  }}
-  </script>
 </body>
 </html>""")
 

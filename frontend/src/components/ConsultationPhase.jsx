@@ -24,7 +24,7 @@ export default function ConsultationPhase({ clinicalNote, isRecording, processin
   if (currentStep < 0) return null
 
   return (
-    <div className={`flex items-center gap-0 animate-fadeIn ${className}`}>
+    <div className={`flex items-center gap-0 ${className}`}>
       {STEPS.map((step, i) => {
         const isActive = i === currentStep
         const isCompleted = i < currentStep

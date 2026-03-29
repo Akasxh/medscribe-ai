@@ -1,12 +1,10 @@
-import { Stethoscope, Heart, Syringe, Baby, Brain, Bone } from 'lucide-react'
-
 const SPECIALTIES = [
-  { value: "general", label: "General", icon: Stethoscope },
-  { value: "cardiology", label: "Cardio", icon: Heart },
-  { value: "diabetology", label: "Diabetes", icon: Syringe },
-  { value: "pediatrics", label: "Peds", icon: Baby },
-  { value: "psychiatry", label: "Psych", icon: Brain },
-  { value: "orthopedics", label: "Ortho", icon: Bone },
+  { value: "general", label: "General", icon: "\u{1F3E5}" },
+  { value: "cardiology", label: "Cardio", icon: "\u2764\uFE0F" },
+  { value: "diabetology", label: "Diabetes", icon: "\u{1F489}" },
+  { value: "pediatrics", label: "Peds", icon: "\u{1F476}" },
+  { value: "psychiatry", label: "Psych", icon: "\u{1F9E0}" },
+  { value: "orthopedics", label: "Ortho", icon: "\u{1F9B4}" },
 ];
 
 export default function SpecialtySelector({ value = "general", onChange, className = "" }) {
@@ -27,17 +25,17 @@ export default function SpecialtySelector({ value = "general", onChange, classNa
             aria-checked={isActive}
             onClick={() => onChange(s.value)}
             className={`
-              inline-flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2.5 min-h-[48px] rounded-full
+              inline-flex items-center justify-center gap-1.5 px-4 py-2.5 min-h-[48px] rounded-full
               text-sm sm:text-xs font-medium
-              whitespace-nowrap flex-shrink-0 cursor-pointer
-              hover:scale-105 active:scale-95 transition-transform duration-150
+              whitespace-nowrap transition-all duration-150 flex-shrink-0 cursor-pointer
+              hover:scale-105 active:scale-95 transition-transform
               ${isActive
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500 active:bg-slate-100 dark:active:bg-slate-700'
               }
             `}
           >
-            <s.icon className="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+            <span className="text-base sm:text-sm leading-none">{s.icon}</span>
             <span>{s.label}</span>
           </button>
         );

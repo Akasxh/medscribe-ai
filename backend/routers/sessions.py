@@ -1,18 +1,9 @@
-from __future__ import annotations
-
-import asyncio
-import logging
-from typing import Any
-
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-
 from models.schemas import Session, SessionStatus
 from routers.transcribe import sessions_store
 from services.learning_service import store_correction, get_correction_stats
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -48,17 +39,13 @@ async def list_sessions():
 @router.post("/corrections")
 async def submit_correction(req: CorrectionRequest):
     """Store a doctor's correction for continuous learning."""
-    try:
-        correction = store_correction(
-            session_id=req.session_id,
-            transcript=req.transcript,
-            original_note=req.original_note,
-            corrected_note=req.corrected_note,
-            field_path=req.field_path,
-        )
-    except Exception as e:
-        logger.error("Failed to save correction: %s", e)
-        raise HTTPException(status_code=500, detail="Failed to save correction. Please try again.")
+    correction = store_correction(
+        session_id=req.session_id,
+        transcript=req.transcript,
+        original_note=req.original_note,
+        corrected_note=req.corrected_note,
+        field_path=req.field_path,
+    )
     return {"status": "stored", "correction": correction}
 
 
@@ -75,118 +62,3 @@ async def get_session(session_id: str):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
-
-
-@router.delete("/{session_id}")
-async def delete_session(session_id: str):
-    """Delete a session by ID."""
-    if session_id in sessions_store:
-        del sessions_store[session_id]
-        return {"deleted": True, "session_id": session_id}
-    raise HTTPException(status_code=404, detail="Session not found")
-
-
-# ---------------------------------------------------------------------------
-# Admin + Auth routes (separate router so prefix doesn't collide)
-# ---------------------------------------------------------------------------
-
-admin_router = APIRouter(prefix="/api", tags=["admin"])
-
-
-@admin_router.get("/admin/consultations")
-async def list_all_consultations(
-    doctor_name: str = Query(default="", description="Filter by doctor name"),
-    specialty: str = Query(default="", description="Filter by specialty"),
-    from_date: str = Query(default="", description="Filter from date (ISO format)"),
-    to_date: str = Query(default="", description="Filter to date (ISO format)"),
-    limit: int = Query(default=200, ge=1, le=500, description="Max results"),
-) -> list[dict[str, Any]]:
-    """Admin endpoint: fetch all consultations from Supabase with joined data."""
-    from services.supabase_service import get_service_client
-
-    client = get_service_client()
-    if not client:
-        return [
-            s.model_dump()
-            for s in sorted(
-                sessions_store.values(),
-                key=lambda x: x.created_at,
-                reverse=True,
-            )
-        ]
-
-    try:
-        query = (
-            client.table("consultations")
-            .select("*, clinical_notes(*), fhir_bundles(*)")
-            .order("created_at", desc=True)
-            .limit(limit)
-        )
-        # Apply filters
-        if doctor_name:
-            query = query.ilike("doctor_name", f"%{doctor_name}%")
-        if specialty:
-            query = query.eq("specialty", specialty)
-        if from_date:
-            query = query.gte("created_at", from_date)
-        if to_date:
-            query = query.lte("created_at", to_date)
-
-        result = await asyncio.to_thread(lambda: query.execute())
-
-        for row in result.data:
-            notes = row.pop("clinical_notes", [])
-            row["clinical_note"] = notes[0] if notes else None
-            bundles = row.pop("fhir_bundles", [])
-            bundle = bundles[0] if bundles else None
-            row["fhir_bundle"] = bundle.get("bundle") if bundle else None
-            # Map fhir_quality from the joined fhir_bundles row
-            if bundle and (bundle.get("quality_score") or bundle.get("quality_grade")):
-                row["fhir_quality"] = {
-                    "score": bundle.get("quality_score"),
-                    "grade": bundle.get("quality_grade"),
-                }
-            else:
-                row.setdefault("fhir_quality", row.get("fhir_quality"))
-            # cds_alerts now stored in consultations table directly
-            row.setdefault("cds_alerts", row.get("cds_alerts") or [])
-        return result.data  # type: ignore[return-value]
-    except Exception as exc:
-        logger.error("Failed to fetch consultations from Supabase: %s", exc)
-        return [
-            s.model_dump()
-            for s in sorted(
-                sessions_store.values(),
-                key=lambda x: x.created_at,
-                reverse=True,
-            )
-        ]
-
-
-@admin_router.get("/auth/check-admin")
-async def check_admin(
-    email: str = Query(..., description="Email to check"),
-    password: str = Query("", description="Admin password"),
-) -> dict[str, bool]:
-    """Check whether the given email + password belongs to an admin user."""
-    from services.supabase_service import get_service_client
-
-    client = get_service_client()
-    if not client:
-        return {"is_admin": False}
-
-    try:
-        result = await asyncio.to_thread(
-            lambda: client.table("admin_users")
-            .select("email, password")
-            .eq("email", email.strip().lower())
-            .execute()
-        )
-        if not result.data:
-            return {"is_admin": False}
-        # Verify password matches
-        stored_password = result.data[0].get("password", "")
-        return {"is_admin": password == stored_password}
-    except Exception as exc:
-        logger.error("Failed to check admin status: %s", exc)
-        return {"is_admin": False}

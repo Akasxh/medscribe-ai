@@ -1,4 +1,4 @@
-import { FlaskConical, ChevronRight, ChevronDown } from 'lucide-react'
+import { FlaskConical } from 'lucide-react'
 import { useState, useRef, useEffect, useCallback } from 'react'
 
 const DEMO_CONVERSATIONS = [
@@ -111,25 +111,13 @@ const DEMO_CONVERSATIONS = [
   },
 ]
 
-export default function DemoMode({ onTranscript, onComplete, isRecording, onPlayingChange }) {
+export default function DemoMode({ onTranscript, isRecording }) {
   const [playing, setPlaying] = useState(false)
   const [currentDemo, setCurrentDemo] = useState(null)
   const [currentSegment, setCurrentSegment] = useState(0)
   const [totalSegments, setTotalSegments] = useState(0)
   const [collapsed, setCollapsed] = useState(true)
   const timeoutIdsRef = useRef([])
-  // Stable ref so long-running timeouts always call the latest callback
-  const onTranscriptRef = useRef(onTranscript)
-  const onCompleteRef = useRef(onComplete)
-  const onPlayingChangeRef = useRef(onPlayingChange)
-  useEffect(() => { onTranscriptRef.current = onTranscript }, [onTranscript])
-  useEffect(() => { onCompleteRef.current = onComplete }, [onComplete])
-  useEffect(() => { onPlayingChangeRef.current = onPlayingChange }, [onPlayingChange])
-
-  // Notify parent whenever playing state changes
-  useEffect(() => {
-    onPlayingChangeRef.current?.(playing)
-  }, [playing])
 
   const clearAllTimeouts = useCallback(() => {
     timeoutIdsRef.current.forEach(clearTimeout)
@@ -155,16 +143,14 @@ export default function DemoMode({ onTranscript, onComplete, isRecording, onPlay
     demo.segments.forEach((seg, i) => {
       const outerTimeout = setTimeout(() => {
         setCurrentSegment(i + 1)
-        onTranscriptRef.current(seg.text, false) // interim first
+        onTranscript(seg.text, false) // interim first
         const innerTimeout = setTimeout(() => {
-          onTranscriptRef.current(seg.text, true) // then final
+          onTranscript(seg.text, true) // then final
           if (i === demo.segments.length - 1) {
             setPlaying(false)
             setCurrentDemo(null)
             setCurrentSegment(0)
             setTotalSegments(0)
-            // Trigger processing after demo completes
-            onCompleteRef.current?.()
           }
         }, 800)
         timeoutIdsRef.current.push(innerTimeout)
@@ -185,7 +171,7 @@ export default function DemoMode({ onTranscript, onComplete, isRecording, onPlay
         <div className="flex items-center gap-2">
           <FlaskConical className="w-4 h-4 sm:w-3 sm:h-3 text-indigo-500" />
           <span className="text-sm sm:text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-            Demo Scenarios {collapsed ? <ChevronRight className="w-3 h-3 inline" /> : <ChevronDown className="w-3 h-3 inline" />}
+            Demo Scenarios {collapsed ? '\u25B8' : '\u25BE'}
           </span>
           {playing && (
             <span className="px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-[10px] font-medium text-indigo-600 dark:text-indigo-400">
@@ -216,7 +202,6 @@ export default function DemoMode({ onTranscript, onComplete, isRecording, onPlay
                 key={demo.name}
                 onClick={() => playDemo(demo)}
                 disabled={isDisabled}
-                aria-label={`Play demo: ${demo.name}`}
                 title={demo.description || demo.name}
                 className={`
                   inline-flex items-center gap-1.5 px-4 py-2.5 min-h-[48px] rounded-full text-sm sm:text-[11px] font-medium transition-all

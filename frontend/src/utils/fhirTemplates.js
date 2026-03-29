@@ -1,40 +1,49 @@
 // Professional muted color system for FHIR resources
 export const RESOURCE_COLORS = {
   Patient: {
-    bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600 dark:text-slate-300',
-    badge: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300', accent: 'border-l-slate-500',
+    bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600',
+    badge: 'bg-slate-100 text-slate-700', accent: 'border-l-slate-500',
+    dark: { bg: 'dark:bg-slate-900/60', border: 'dark:border-slate-700', text: 'dark:text-slate-300' },
   },
   Encounter: {
-    bg: 'bg-blue-50/60', border: 'border-blue-200', text: 'text-blue-600 dark:text-blue-300',
-    badge: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', accent: 'border-l-blue-500',
+    bg: 'bg-blue-50/60', border: 'border-blue-200', text: 'text-blue-600',
+    badge: 'bg-blue-50 text-blue-700', accent: 'border-l-blue-500',
+    dark: { bg: 'dark:bg-blue-950/40', border: 'dark:border-blue-800', text: 'dark:text-blue-300' },
   },
   Condition: {
-    bg: 'bg-amber-50/60', border: 'border-amber-200', text: 'text-amber-600 dark:text-amber-300',
-    badge: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', accent: 'border-l-amber-500',
+    bg: 'bg-amber-50/60', border: 'border-amber-200', text: 'text-amber-600',
+    badge: 'bg-amber-50 text-amber-700', accent: 'border-l-amber-500',
+    dark: { bg: 'dark:bg-amber-950/40', border: 'dark:border-amber-800', text: 'dark:text-amber-300' },
   },
   Observation: {
-    bg: 'bg-emerald-50/60', border: 'border-emerald-200', text: 'text-emerald-600 dark:text-emerald-300',
-    badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', accent: 'border-l-emerald-500',
+    bg: 'bg-emerald-50/60', border: 'border-emerald-200', text: 'text-emerald-600',
+    badge: 'bg-emerald-50 text-emerald-700', accent: 'border-l-emerald-500',
+    dark: { bg: 'dark:bg-emerald-950/40', border: 'dark:border-emerald-800', text: 'dark:text-emerald-300' },
   },
   MedicationRequest: {
-    bg: 'bg-rose-50/60', border: 'border-rose-200', text: 'text-rose-600 dark:text-rose-300',
-    badge: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300', accent: 'border-l-rose-500',
+    bg: 'bg-rose-50/60', border: 'border-rose-200', text: 'text-rose-600',
+    badge: 'bg-rose-50 text-rose-700', accent: 'border-l-rose-500',
+    dark: { bg: 'dark:bg-rose-950/40', border: 'dark:border-rose-800', text: 'dark:text-rose-300' },
   },
   AllergyIntolerance: {
-    bg: 'bg-orange-50/60', border: 'border-orange-200', text: 'text-orange-600 dark:text-orange-300',
-    badge: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', accent: 'border-l-orange-500',
+    bg: 'bg-orange-50/60', border: 'border-orange-200', text: 'text-orange-600',
+    badge: 'bg-orange-50 text-orange-700', accent: 'border-l-orange-500',
+    dark: { bg: 'dark:bg-orange-950/40', border: 'dark:border-orange-800', text: 'dark:text-orange-300' },
   },
   CarePlan: {
-    bg: 'bg-teal-50/60', border: 'border-teal-200', text: 'text-teal-600 dark:text-teal-300',
-    badge: 'bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300', accent: 'border-l-teal-500',
+    bg: 'bg-teal-50/60', border: 'border-teal-200', text: 'text-teal-600',
+    badge: 'bg-teal-50 text-teal-700', accent: 'border-l-teal-500',
+    dark: { bg: 'dark:bg-teal-950/40', border: 'dark:border-teal-800', text: 'dark:text-teal-300' },
   },
   ServiceRequest: {
-    bg: 'bg-cyan-50/60', border: 'border-cyan-200', text: 'text-cyan-600 dark:text-cyan-300',
-    badge: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300', accent: 'border-l-cyan-500',
+    bg: 'bg-cyan-50/60', border: 'border-cyan-200', text: 'text-cyan-600',
+    badge: 'bg-cyan-50 text-cyan-700', accent: 'border-l-cyan-500',
+    dark: { bg: 'dark:bg-cyan-950/40', border: 'dark:border-cyan-800', text: 'dark:text-cyan-300' },
   },
   DetectedIssue: {
-    bg: 'bg-red-50/60', border: 'border-red-200', text: 'text-red-600 dark:text-red-300',
-    badge: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300', accent: 'border-l-red-500',
+    bg: 'bg-red-50/60', border: 'border-red-200', text: 'text-red-600',
+    badge: 'bg-red-50 text-red-700', accent: 'border-l-red-500',
+    dark: { bg: 'dark:bg-red-950/40', border: 'dark:border-red-800', text: 'dark:text-red-300' },
   },
 }
 

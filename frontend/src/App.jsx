@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo, useEffect, lazy, Suspense } from 'react'
+import { useState, useCallback, useRef, useMemo, lazy, Suspense } from 'react'
 import HealthBanner from './components/HealthBanner'
 import Header from './components/Header'
 import RecordButton from './components/RecordButton'
@@ -13,13 +13,13 @@ import SafetyScoreCard from './components/SafetyScoreCard'
 import useSafetyScore from './hooks/useSafetyScore'
 import ConsentBanner from './components/ConsentBanner'
 import ABHABadge from './components/ABHABadge'
+import UserRegistration from './components/UserRegistration'
 import ErrorBoundary from './components/ErrorBoundary'
 import useWebSocket from './hooks/useWebSocket'
 import useAudioRecorder from './hooks/useAudioRecorder'
 import LanguageSelector from './components/LanguageSelector'
 import ToastContainer from './components/ToastNotification'
 import LandingHero from './components/LandingHero'
-import useSupabaseAuth from './hooks/useSupabaseAuth'
 import { FileJson, ClipboardList, Shield, RotateCcw } from 'lucide-react'
 
 // Lazy-loaded components (not needed on initial render)
@@ -39,7 +39,6 @@ function LazyFallback() {
   )
 }
 
-const AUTOSAVE_KEY = 'medscribe_autosave'
 const SESSION_STORAGE_KEY = 'medscribe_session_id'
 
 function generateSessionId() {
@@ -73,64 +72,20 @@ export default function App() {
   const [consented, setConsented] = useState(() => sessionStorage.getItem('medscribe_consent') === 'true')
   const [patientName, setPatientName] = useState('')
   const [speechLang, setSpeechLang] = useState('hi-IN')
-  const [useSarvam, setUseSarvam] = useState(true)
-  const [demoPlaying, setDemoPlaying] = useState(false)
+  const [useSarvam, setUseSarvam] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
   const hasStartedRef = useRef(false)
   // Set-based dedup for all final transcripts (live + demo) — catches non-consecutive duplicates
   const seenFinalsRef = useRef(new Set())
-  const [autosaveRecovery, setAutosaveRecovery] = useState(null)
-
-  // Autosave transcript to localStorage
-  useEffect(() => {
-    if (transcriptLines.length > 0) {
-      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ sessionId, transcriptLines, timestamp: Date.now() }))
-    }
-  }, [transcriptLines, sessionId])
-
-  // Check for autosave recovery on mount
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(AUTOSAVE_KEY)
-      if (raw) {
-        const saved = JSON.parse(raw)
-        // Only show recovery if less than 1 hour old and has content
-        if (saved.transcriptLines?.length > 0 && Date.now() - saved.timestamp < 3600000) {
-          setAutosaveRecovery(saved)
-        } else {
-          localStorage.removeItem(AUTOSAVE_KEY)
-        }
-      }
-    } catch {
-      localStorage.removeItem(AUTOSAVE_KEY)
-    }
-  }, [])
-
-  const handleRecoverAutosave = useCallback(() => {
-    if (!autosaveRecovery) return
-    setTranscriptLines(autosaveRecovery.transcriptLines)
-    setSessionId(autosaveRecovery.sessionId)
-    sessionStorage.setItem(SESSION_STORAGE_KEY, autosaveRecovery.sessionId)
-    hasStartedRef.current = true
-    setSessionActive(true)
-    setAutosaveRecovery(null)
-  }, [autosaveRecovery])
-
-  const handleDismissAutosave = useCallback(() => {
-    localStorage.removeItem(AUTOSAVE_KEY)
-    setAutosaveRecovery(null)
-  }, [])
 
   const handleRegister = useCallback((newUser) => {
     setUser(newUser)
   }, [])
 
-  const { signOut } = useSupabaseAuth()
-  const handleLogout = useCallback(async () => {
-    await signOut().catch(() => {})
+  const handleLogout = useCallback(() => {
     localStorage.removeItem('medscribe_user')
     setUser(null)
-  }, [signOut])
+  }, [])
 
   const ws = useWebSocket(sessionId)
 
@@ -147,8 +102,6 @@ export default function App() {
     hasStartedRef.current = false
     setSessionActive(false)
     seenFinalsRef.current = new Set()
-    localStorage.removeItem(AUTOSAVE_KEY)
-    setAutosaveRecovery(null)
   }, [ws])
 
   // Safety score hook
@@ -201,18 +154,13 @@ export default function App() {
     // Guard against double-tap: if already recording, don't start a second instance
     if (recorder.isRecording) return
     ws.connect()
-    // Send doctor identity after connection opens
-    setTimeout(() => {
-      if (user?.name) ws.sendDoctorInfo(user.name)
-    }, 500)
     hasStartedRef.current = true
     recorder.startRecording()
-  }, [ws, recorder, consented, user])
+  }, [ws, recorder, consented])
 
   const handleStop = useCallback(() => {
     recorder.stopRecording()
-    // 2s delay: Sarvam API needs time to process the final audio chunk
-    setTimeout(() => ws.sendStop(), 2000)
+    setTimeout(() => ws.sendStop(), 500)
   }, [recorder, ws])
 
   // Demo mode handler
@@ -230,12 +178,7 @@ export default function App() {
         setTranscriptLines(prev => [...prev, text])
       }
       ws.sendTranscript(text, isFinal)
-    }, needsDelay ? 1500 : 0)
-  }, [ws])
-
-  // When demo finishes, send stop to trigger Gemini processing
-  const handleDemoComplete = useCallback(() => {
-    setTimeout(() => ws.sendStop(), 500)
+    }, needsDelay ? 800 : 0)
   }, [ws])
 
   // Toast notification for critical alerts is sufficient — no auto-tab-switch
@@ -246,24 +189,14 @@ export default function App() {
   const hasSession = sessionActive || hasStartedRef.current || transcriptLines.length > 0 || ws.clinicalNote
   const showHero = !hasSession
 
+  // Show registration screen if no user is logged in
+  if (!user) {
+    return <UserRegistration onRegister={handleRegister} />
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
       <HealthBanner />
-      {autosaveRecovery && (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 py-2.5 flex items-center justify-between gap-3">
-          <p className="text-sm text-amber-800 dark:text-amber-300">
-            Unsaved transcript found ({autosaveRecovery.transcriptLines.length} segments).
-          </p>
-          <div className="flex gap-2 shrink-0">
-            <button onClick={handleRecoverAutosave} className="px-3 py-1 text-xs font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors">
-              Restore
-            </button>
-            <button onClick={handleDismissAutosave} className="px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors">
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
       <ToastContainer />
       <Header user={user} onLogout={handleLogout} />
 
@@ -288,7 +221,7 @@ export default function App() {
                 </div>
                 <button
                   onClick={handleNewConsultation}
-                  disabled={recorder.isRecording || demoPlaying}
+                  disabled={recorder.isRecording}
                   aria-label="New consultation"
                   className="flex items-center gap-1.5 px-3 py-2.5 min-h-[48px] text-sm sm:text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                 >
@@ -351,7 +284,7 @@ export default function App() {
             {/* Recording card — compact with inline demo toggle */}
             <div className="card p-3">
               <div className="flex items-center justify-between gap-3 mb-2">
-                <LanguageSelector value={speechLang} onChange={handleSpeechLangChange} />
+                <LanguageSelector value={speechLang} onChange={handleSpeechLangChange} useSarvam={useSarvam} onSarvamChange={setUseSarvam} />
               </div>
               <RecordButton
                 isRecording={recorder.isRecording}
@@ -464,7 +397,7 @@ export default function App() {
                       <FHIRQualityBadge quality={ws.fhirQuality} />
                       <div className="mt-2">
                         <Suspense fallback={<LazyFallback />}>
-                          <FHIRViewer bundle={ws.fhirBundle} quality={ws.fhirQuality} />
+                          <FHIRViewer bundle={ws.fhirBundle} />
                         </Suspense>
                       </div>
                     </>
@@ -527,23 +460,19 @@ export default function App() {
         )}
 
         {/* Demo mode — single instance across hero and active views */}
-        <div className="card p-0 overflow-hidden">
-          <Suspense fallback={<LazyFallback />}>
-            <DemoMode
-              onTranscript={handleDemoTranscript}
-              onComplete={handleDemoComplete}
-              isRecording={recorder.isRecording}
-              onPlayingChange={setDemoPlaying}
-            />
-          </Suspense>
-        </div>
+        <Suspense fallback={<LazyFallback />}>
+          <DemoMode
+            onTranscript={handleDemoTranscript}
+            isRecording={recorder.isRecording}
+          />
+        </Suspense>
 
         </ErrorBoundary>
       </main>
 
       {/* Footer — compact */}
       <footer className="text-center py-3 text-[11px] text-slate-400 dark:text-slate-600">
-        MedScribe AI · Built for HACKMATRIX 2.0
+        MedScribe AI — HACKMATRIX 2.0 (Jilo Health x NJACK IIT Patna)
       </footer>
     </div>
   )

@@ -55,7 +55,6 @@
   --color-text-tertiary: #64748b;
   --color-accent: #3b82f6;
   --color-accent-soft: rgba(59, 130, 246, 0.12);
-  --color-success: #34d399;
   --color-success-soft: rgba(5, 150, 105, 0.12);
   --color-warning-soft: rgba(217, 119, 6, 0.12);
   --color-danger-soft: rgba(220, 38, 38, 0.12);
@@ -297,6 +296,16 @@ body {
   animation: slide-in-right 0.35s ease-out;
 }
 
+/* ─── Pulse ring ─── */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.25; }
+  50% { transform: scale(1.12); opacity: 0; }
+  100% { transform: scale(1); opacity: 0.25; }
+}
+.animate-pulse-ring {
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
 /* ─── Fade-in for transcript words ─── */
 @keyframes fade-in-word {
   from { opacity: 0; }
@@ -306,7 +315,11 @@ body {
   animation: fade-in-word 0.15s ease-in;
 }
 
-/* ─── Skeleton shimmer (uses Tailwind keyframes) ─── */
+/* ─── Skeleton shimmer (smoother) ─── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
 .skeleton {
   background: linear-gradient(90deg, var(--color-surface-2) 25%, var(--color-border-subtle) 37%, var(--color-surface-2) 63%);
   background-size: 400% 100%;

@@ -1,4 +1,6 @@
 import os
+import pathlib
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -19,8 +21,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 
 from routers.transcribe import router as transcribe_router
-from routers.sessions import router as sessions_router, admin_router
-from routers.drugs import router as drugs_router
+from routers.sessions import router as sessions_router
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -40,7 +41,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: blob:; "
-            "connect-src 'self' ws: wss: https://*.supabase.co wss://*.supabase.co; "
+            "connect-src 'self' ws: wss:; "
             "object-src 'none'; "
             "base-uri 'self'"
         )
@@ -82,8 +83,6 @@ app.add_middleware(
 # Include routers
 app.include_router(transcribe_router)
 app.include_router(sessions_router)
-app.include_router(admin_router)
-app.include_router(drugs_router)
 
 
 @app.on_event("startup")
@@ -106,8 +105,8 @@ async def health_check():
         "version": "1.0.0",
         "features": {
             "gemini": bool(os.getenv("GEMINI_API_KEY", "")),
-            "stt": "Web Speech API (browser-native)",
-            "encryption": bool(os.environ.get("ENCRYPTION_KEY")),
+            "stt": bool(os.getenv("SARVAM_API_KEY", "")),
+            "encryption": True,
         },
     }
 
@@ -115,40 +114,17 @@ async def health_check():
 # Serve frontend static files in production (when built frontend is in ./static)
 _static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(_static_dir):
-    _index_html = os.path.join(_static_dir, "index.html")
+    _assets_dir = os.path.join(_static_dir, "assets")
+    if os.path.exists(_assets_dir):
+        app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
 
-    # Mount static files at specific known paths (not root — that blocks API routes)
-    for subdir in ("assets", "icons"):
-        _sub = os.path.join(_static_dir, subdir)
-        if os.path.exists(_sub):
-            app.mount(f"/{subdir}", StaticFiles(directory=_sub), name=subdir)
-
-    # Serve specific static files at root level (sw.js, manifest.json, etc.)
-    @app.get("/sw.js", include_in_schema=False)
-    @app.get("/manifest.json", include_in_schema=False)
-    @app.get("/favicon.ico", include_in_schema=False)
-    async def serve_static_file(request: Request) -> FileResponse:
-        path = request.url.path.lstrip("/")
-        fpath = os.path.join(_static_dir, path)
-        if os.path.isfile(fpath):
-            return FileResponse(fpath)
-        raise HTTPException(status_code=404)
-
-    # 404 exception handler: serve index.html for non-API GET requests (SPA fallback)
-    from starlette.exceptions import HTTPException as StarletteHTTPException
-
-    @app.exception_handler(StarletteHTTPException)
-    async def spa_fallback(request: Request, exc: StarletteHTTPException):
-        # Only serve SPA for GET requests to non-API paths
-        if (
-            exc.status_code == 404
-            and request.method == "GET"
-            and not request.url.path.startswith(("/api/", "/ws/", "/rx/"))
-        ):
-            return FileResponse(_index_html)
-        # For API 404s, return the original JSON error
-        from fastapi.responses import JSONResponse
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"detail": exc.detail or "Not found"},
-        )
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str) -> FileResponse:
+        """SPA fallback: serve index.html for all non-API/WS routes."""
+        if full_path.startswith(("api/", "ws/", "rx/")):
+            raise HTTPException(status_code=404, detail="Not found")
+        safe_root = pathlib.Path(_static_dir).resolve()
+        requested = (safe_root / full_path).resolve()
+        if str(requested).startswith(str(safe_root)) and requested.is_file():
+            return FileResponse(str(requested))
+        return FileResponse(os.path.join(_static_dir, "index.html"))

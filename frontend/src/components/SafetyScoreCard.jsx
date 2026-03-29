@@ -49,7 +49,7 @@ export default function SafetyScoreCard({ score = 100, level = 'safe', breakdown
   }, [score])
 
   return (
-    <div className="card !p-0">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
         <ShieldCheck className="w-4 h-4 text-emerald-500" />
@@ -57,15 +57,7 @@ export default function SafetyScoreCard({ score = 100, level = 'safe', breakdown
       </div>
 
       <div className="p-4 flex flex-col items-center gap-3">
-        {/* Empty state — no session data yet */}
-        {score === 100 && breakdown.length === 0 && (
-          <p className="text-sm text-slate-400 dark:text-slate-500 py-4 text-center">
-            Safety score appears after processing
-          </p>
-        )}
-
         {/* SVG Ring */}
-        {!(score === 100 && breakdown.length === 0) && (<>
         <div className="relative w-28 h-28">
           <svg role="img" aria-label={`Safety score: ${score} out of 100`} viewBox="0 0 100 100" className="w-full h-full -rotate-90">
             {/* Background ring */}
@@ -107,8 +99,6 @@ export default function SafetyScoreCard({ score = 100, level = 'safe', breakdown
         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide ${config.bg} ${config.text}`}>
           {config.label}
         </span>
-
-        </>)}
 
         {/* Breakdown toggle */}
         {breakdown.length > 0 && (

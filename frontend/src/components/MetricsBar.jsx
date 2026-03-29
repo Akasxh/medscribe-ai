@@ -32,7 +32,7 @@ export default function MetricsBar({ elapsed, wordCount, resourceCount, processi
     },
     {
       icon: processing ? Zap : ShieldCheck,
-      value: processing ? 'Live' : (resourceCount > 0 ? 'Valid' : '--'),
+      value: processing ? 'Live' : (resourceCount > 0 ? 'Pass' : '--'),
       label: 'Status',
       color: processing ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400',
     },

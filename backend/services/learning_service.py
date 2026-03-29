@@ -44,8 +44,7 @@ def _load_corrections() -> list[dict]:
     try:
         with open(CORRECTIONS_FILE, "r") as f:
             _corrections_cache = json.load(f)
-    except (json.JSONDecodeError, IOError) as exc:
-        logger.error("Corrections file corrupted, resetting: %s", exc)
+    except (json.JSONDecodeError, IOError):
         _corrections_cache = []
     return _corrections_cache
 
@@ -118,8 +117,7 @@ def get_learning_examples(transcript: str) -> str:
     Returns a formatted string to append to the extraction prompt,
     showing the AI common corrections it should learn from.
     """
-    with _corrections_lock:
-        corrections = _load_corrections()
+    corrections = _load_corrections()
     if not corrections:
         return ""
 

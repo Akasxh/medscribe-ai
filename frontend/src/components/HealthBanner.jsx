@@ -20,8 +20,6 @@ export default function HealthBanner() {
         } else {
           setStatus(null)
           setDismissed(false)
-          // Stop polling once healthy
-          clearInterval(intervalRef.current)
         }
       } catch {
         setStatus('unreachable')
@@ -29,7 +27,7 @@ export default function HealthBanner() {
     }
 
     checkHealth()
-    intervalRef.current = setInterval(checkHealth, 30000)
+    intervalRef.current = setInterval(checkHealth, 10000)
     return () => clearInterval(intervalRef.current)
   }, [])
 

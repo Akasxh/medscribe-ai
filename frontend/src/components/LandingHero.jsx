@@ -27,9 +27,9 @@ const features = [
 
 const trustIndicators = [
   { label: '6 Medical Specialties', icon: Stethoscope },
-  { label: '20+ Safety Rules', icon: Shield },
+  { label: '15+ Drug Interaction Rules', icon: Shield },
   { label: 'ICD-10 + SNOMED + LOINC', icon: Database },
-  { label: 'Fernet Encrypted (AES-128)', icon: Shield },
+  { label: 'AES-256 Encrypted', icon: Shield },
 ]
 
 const fadeUp = {
@@ -41,7 +41,7 @@ const fadeUp = {
   }),
 }
 
-export default function LandingHero({ onStart, supported = true }) {
+export default function LandingHero({ onStart }) {
   return (
     <section className="relative overflow-hidden">
       {/* Background gradient */}
@@ -142,23 +142,13 @@ export default function LandingHero({ onStart, supported = true }) {
         >
           <button
             onClick={onStart}
-            disabled={!supported}
-            className={`group inline-flex items-center gap-2.5 px-7 py-3 font-medium rounded-xl shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${
-              supported
-                ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-blue-600/20 hover:shadow-blue-600/30'
-                : 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed shadow-none'
-            }`}
+            className="group inline-flex items-center gap-2.5 px-7 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium rounded-xl shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
             aria-label="Start a new consultation"
           >
             <Mic className="w-5 h-5" />
-            {supported ? 'Start Consultation' : 'Speech Not Supported'}
+            Start Consultation
             <ChevronRight className="w-4 h-4 opacity-60 group-hover:translate-x-0.5 transition-transform" />
           </button>
-          {!supported && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              Your browser does not support the Web Speech API. Try Chrome or Edge.
-            </p>
-          )}
           <p className="text-xs text-slate-400 dark:text-slate-500">
             or try a demo scenario below
           </p>

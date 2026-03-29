@@ -151,19 +151,30 @@ DRUG_INTERACTIONS: list[DrugInteraction] = [
             "may cause life-threatening hyperkalemia."
         ),
     ),
-    # NOTE: Montelukast + Theophylline interaction removed — montelukast does
-    # not clinically inhibit theophylline metabolism (FDA label confirms no
-    # significant PK interaction at standard doses).
     DrugInteraction(
-        drug_a=frozenset({"omeprazole", "esomeprazole", "omez", "ocid",
-                          "nexpro", "esomep"}),
+        drug_a=frozenset({"montelukast", "montair", "singulair"}),
+        drug_b=frozenset({"theophylline", "deriphyllin", "etofylline",
+                          "aminophylline"}),
+        severity=AlertSeverity.WARNING,
+        title="Montelukast + Theophylline: Increased theophylline levels",
+        description=(
+            "Montelukast (Montair) can inhibit theophylline metabolism, "
+            "raising plasma theophylline levels and increasing the risk "
+            "of toxicity (nausea, tremor, seizures). Monitor theophylline "
+            "levels."
+        ),
+    ),
+    DrugInteraction(
+        drug_a=frozenset({"pantoprazole", "pan-d", "pan d", "pantop",
+                          "pantocid"}),
         drug_b=frozenset({"clopidogrel", "clopilet", "plavix"}),
         severity=AlertSeverity.WARNING,
-        title="Omeprazole/Esomeprazole + Clopidogrel: Reduced antiplatelet efficacy",
+        title="Pantoprazole + Clopidogrel: Reduced antiplatelet efficacy",
         description=(
-            "Omeprazole/Esomeprazole inhibit CYP2C19 and reduce Clopidogrel "
-            "conversion to its active metabolite, diminishing "
-            "its antiplatelet effect. Prefer pantoprazole or an H2-blocker."
+            "Pantoprazole (Pan-D) can reduce the conversion of Clopidogrel "
+            "to its active metabolite via CYP2C19 inhibition, diminishing "
+            "its antiplatelet effect. Consider using a non-interacting PPI "
+            "or an H2-blocker."
         ),
     ),
     DrugInteraction(
@@ -249,34 +260,6 @@ DRUG_INTERACTIONS: list[DrugInteraction] = [
             "switching to Atorvastatin or Rosuvastatin."
         ),
     ),
-    DrugInteraction(
-        drug_a=frozenset({"escitalopram", "nexito", "fluoxetine", "sertraline",
-                          "paroxetine", "ssri"}),
-        drug_b=frozenset({"ibuprofen", "combiflam", "diclofenac", "voveran",
-                          "aceclofenac", "zerodol", "aspirin", "ecosprin",
-                          "nsaid", "naproxen", "piroxicam"}),
-        severity=AlertSeverity.WARNING,
-        title="SSRI + NSAID: Increased GI bleeding risk",
-        description=(
-            "Concurrent SSRI and NSAID use increases risk of "
-            "gastrointestinal bleeding by 3-15x. Consider adding a PPI "
-            "for gastroprotection."
-        ),
-    ),
-    DrugInteraction(
-        drug_a=frozenset({"enalapril", "enam", "ramipril", "cardace", "lisinopril",
-                          "ace inhibitor", "acei"}),
-        drug_b=frozenset({"losartan", "losar", "telmisartan", "telma", "valsartan",
-                          "olmesartan", "arb"}),
-        severity=AlertSeverity.CRITICAL,
-        title="ACE Inhibitor + ARB: Dual RAAS blockade \u2014 hyperkalemia risk",
-        description=(
-            "Combining ACE inhibitors with ARBs (dual RAAS blockade) "
-            "significantly increases risk of hyperkalemia, renal failure, "
-            "and hypotension. Avoid concurrent use unless under specialist "
-            "supervision."
-        ),
-    ),
 ]
 
 
@@ -307,7 +290,7 @@ ALLERGY_RULES: list[AllergyRule] = [
         title="Penicillin allergy: Cephalosporin cross-reactivity risk",
         description=(
             "The patient has a documented penicillin allergy. Cephalosporins "
-            "share the beta-lactam ring structure and carry approximately 1-2% "
+            "share the beta-lactam ring structure and carry approximately 1-10% "
             "cross-reactivity risk. Use with caution and consider alternatives "
             "such as macrolides or fluoroquinolones."
         ),
@@ -333,7 +316,9 @@ ALLERGY_RULES: list[AllergyRule] = [
                                      "cotrimoxazole", "septran"}),
         contraindicated_drugs=frozenset({"sulfamethoxazole", "cotrimoxazole",
                                           "septran", "bactrim", "dapsone",
-                                          "sulfasalazine", "silver sulfadiazine"}),
+                                          "sulfasalazine", "silver sulfadiazine",
+                                          "furosemide", "hydrochlorothiazide",
+                                          "thiazide", "celecoxib"}),
         severity=AlertSeverity.WARNING,
         title="Sulfa allergy: Potential cross-reactivity",
         description=(
@@ -530,14 +515,15 @@ def _parse_dose_mg(dosage_str: str) -> float | None:
     # Try multiplier pattern first: "2x500mg", "2×500mg", "2*500mg"
     mult_match = re.search(r'(\d+)\s*[x×*]\s*(\d+\.?\d*)\s*(mg|mcg|g|ml)?\b', s)
     if mult_match:
-        # Return the single-dose value, not total (2x500mg = 500mg per dose)
+        multiplier = int(mult_match.group(1))
         base_value = float(mult_match.group(2))
         unit = mult_match.group(3) or "mg"
+        value = multiplier * base_value
         if unit == 'g':
-            base_value *= 1000
+            value *= 1000
         elif unit == 'mcg':
-            base_value /= 1000
-        return base_value
+            value /= 1000
+        return value
 
     # Find ALL number+unit matches so we can pick the best one.
     # Use the *last* match (most likely the actual dose when preceded by
@@ -579,7 +565,7 @@ def _check_dosage_alerts(medications: list[dict]) -> list[dict]:
         "cefixime": (400.0, "mg"),
         "pantoprazole": (80.0, "mg"),
         "telmisartan": (80.0, "mg"),
-        "aspirin": (1000.0, "mg"),
+        "aspirin": (650.0, "mg"),
         "montelukast": (10.0, "mg"),
     }
 

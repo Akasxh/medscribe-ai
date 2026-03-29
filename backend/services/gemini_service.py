@@ -111,8 +111,6 @@ class GeminiExtractionService:
                     generation_config=genai.GenerationConfig(
                         response_mime_type="application/json",
                         temperature=0.1,
-                        top_p=0.9,
-                        max_output_tokens=4096,
                     ),
                 ),
             ),

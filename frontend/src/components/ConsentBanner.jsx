@@ -31,6 +31,7 @@ export default function ConsentBanner({ onConsent, consented }) {
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.3 }}
       className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 border-l-4 border-l-blue-600 dark:border-l-blue-400 overflow-hidden"
       role="alert"

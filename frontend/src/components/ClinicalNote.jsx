@@ -2,10 +2,9 @@ import {
   ClipboardList, Thermometer, Stethoscope, Pill, AlertTriangle,
   CalendarCheck, FileText, ChevronDown, ChevronRight, User, GitBranch,
   FlaskConical, ShieldAlert, Pencil, Check, Brain, Heart, Wind, Scale,
-  Activity, X, BookOpen
+  Activity, X
 } from 'lucide-react'
 import { useState, useCallback, useRef, useEffect } from 'react'
-import DrugAlternatives from './DrugAlternatives'
 
 // ─── Animated collapsible section ───
 function Section({ icon: Icon, title, color, children, defaultOpen = true, count }) {
@@ -31,7 +30,6 @@ function Section({ icon: Icon, title, color, children, defaultOpen = true, count
     <div className="py-1">
       <button
         onClick={() => setOpen(!open)}
-        aria-expanded={open}
         className="w-full flex items-center gap-2 px-4 py-2 text-left group transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-700/30 rounded-md"
       >
         <Icon className={`w-4 h-4 ${color} shrink-0`} />
@@ -50,7 +48,7 @@ function Section({ icon: Icon, title, color, children, defaultOpen = true, count
       <div
         ref={contentRef}
         style={{ height: typeof height === 'number' ? `${height}px` : height }}
-        className="overflow-hidden transition-[height] duration-300 ease-in-out"
+        className="overflow-hidden transition-[height] duration-250 ease-in-out"
       >
         <div className="px-4 pb-3 pt-1">{children}</div>
       </div>
@@ -138,70 +136,6 @@ function ConfidenceBar({ value }) {
   )
 }
 
-// ─── Citation badges (collapsed by default) ───
-function CitationBadges({ citations, clinicalReasoning, evidenceBasis, evidenceStrength }) {
-  const [expanded, setExpanded] = useState(false)
-  const hasCitations = citations?.length > 0
-  const hasAny = hasCitations || clinicalReasoning || evidenceBasis || evidenceStrength
-
-  if (!hasAny) return null
-
-  const strengthColor = {
-    strong: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-    moderate: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    weak: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  }
-
-  return (
-    <div className="mt-1.5 space-y-1">
-      {clinicalReasoning && (
-        <p className="text-[12px] italic text-slate-500 dark:text-slate-400 leading-relaxed">
-          {clinicalReasoning}
-        </p>
-      )}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {evidenceBasis && (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/40">
-            {evidenceBasis}
-          </span>
-        )}
-        {evidenceStrength && (
-          <Badge className={strengthColor[evidenceStrength] || strengthColor.moderate}>
-            {evidenceStrength}
-          </Badge>
-        )}
-      </div>
-      {hasCitations && (
-        <>
-          <button
-            onClick={() => setExpanded(e => !e)}
-            className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-          >
-            <BookOpen className="w-3 h-3" />
-            <span>{citations.length} source{citations.length > 1 ? 's' : ''}</span>
-            <ChevronRight className={`w-3 h-3 transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`} />
-          </button>
-          {expanded && (
-            <div className="border-l-2 border-blue-400 dark:border-blue-500 pl-3 ml-1 space-y-1.5 mt-1">
-              {citations.map((cite, ci) => (
-                <div key={ci} className="text-[11px] leading-relaxed">
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">{cite.source}</span>
-                  {cite.section && (
-                    <span className="text-slate-400 dark:text-slate-500 ml-1">— {cite.section}</span>
-                  )}
-                  {cite.relevance && (
-                    <p className="text-slate-500 dark:text-slate-400 mt-0.5">{cite.relevance}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  )
-}
-
 // ─── Skeleton loader ───
 function SkeletonLoader() {
   return (
@@ -236,7 +170,6 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
   const [editData, setEditData] = useState(null)
   const [saving, setSaving] = useState(false)
   const [correctionCount, setCorrectionCount] = useState(0)
-  const [selectedDrug, setSelectedDrug] = useState(null)
 
   const startEditing = useCallback(() => {
     setEditData(structuredClone(data))
@@ -505,42 +438,32 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
         {/* Diagnosis */}
         {diagnosis?.length > 0 && (
           <Section icon={AlertTriangle} title="Diagnosis" color="text-amber-500" count={diagnosis.length}>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {diagnosis.map((dx, i) => (
-                <div key={i}>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${
-                      dx.certainty === 'confirmed' ? 'bg-emerald-500' :
-                      dx.certainty === 'differential' ? 'bg-slate-400' :
-                      'bg-amber-500'
-                    }`} />
-                    <EditableText
-                      value={dx.condition}
-                      onChange={v => updateField(`diagnosis.${i}.condition`, v)}
-                      editing={editing}
-                      className="text-sm font-medium text-slate-700 dark:text-slate-300"
-                    />
-                    <Badge className="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 font-mono text-[10px]">
-                      {dx.icd10_code}
-                    </Badge>
-                    {dx.confidence !== undefined && <ConfidenceBar value={dx.confidence} />}
-                    <Badge className={
-                      dx.certainty === 'confirmed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                      dx.certainty === 'differential' ? 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400' :
-                      'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                    }>{dx.certainty}</Badge>
-                  </div>
-                  <CitationBadges
-                    citations={dx.citations}
-                    clinicalReasoning={dx.clinical_reasoning}
-                    evidenceBasis={dx.evidence_basis}
+                <div key={i} className="flex items-center gap-2 flex-wrap">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${
+                    dx.certainty === 'confirmed' ? 'bg-emerald-500' :
+                    dx.certainty === 'differential' ? 'bg-slate-400' :
+                    'bg-amber-500'
+                  }`} />
+                  <EditableText
+                    value={dx.condition}
+                    onChange={v => updateField(`diagnosis.${i}.condition`, v)}
+                    editing={editing}
+                    className="text-sm font-medium text-slate-700 dark:text-slate-300"
                   />
+                  <Badge className="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 font-mono text-[10px]">
+                    {dx.icd10_code}
+                  </Badge>
+                  {dx.confidence !== undefined && <ConfidenceBar value={dx.confidence} />}
+                  <Badge className={
+                    dx.certainty === 'confirmed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                    dx.certainty === 'differential' ? 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400' :
+                    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                  }>{dx.certainty}</Badge>
                 </div>
               ))}
             </div>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-3 italic">
-              Citations are AI-suggested — verify against source documents
-            </p>
           </Section>
         )}
 
@@ -562,23 +485,12 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
                     <tr key={i} className={`border-t border-slate-100 dark:border-slate-700/40 ${i % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-800/30' : ''}`}>
                       <td className="py-2 px-2">
                         <div className="flex items-baseline gap-1 flex-wrap">
-                          {editing ? (
-                            <EditableText
-                              value={m.name}
-                              onChange={v => updateField(`medications.${i}.name`, v)}
-                              editing={editing}
-                              className="font-medium text-slate-700 dark:text-slate-200 text-[13px]"
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedDrug(m.name)}
-                              className="font-medium text-blue-600 dark:text-blue-400 text-[13px] hover:underline cursor-pointer text-left"
-                              title="View alternatives"
-                            >
-                              {m.name}
-                            </button>
-                          )}
+                          <EditableText
+                            value={m.name}
+                            onChange={v => updateField(`medications.${i}.name`, v)}
+                            editing={editing}
+                            className="font-medium text-slate-700 dark:text-slate-200 text-[13px]"
+                          />
                           {m.generic_name && m.generic_name !== m.name && (
                             <span className="text-[10px] text-slate-400 dark:text-slate-500">({m.generic_name})</span>
                           )}
@@ -640,12 +552,6 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
                       {dd.distinguishing_tests}
                     </p>
                   )}
-                  <CitationBadges
-                    citations={dd.citations}
-                    clinicalReasoning={dd.clinical_reasoning}
-                    evidenceBasis={dd.evidence_basis}
-                    evidenceStrength={dd.evidence_strength}
-                  />
                 </div>
               ))}
             </div>
@@ -654,7 +560,7 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
 
         {/* Recommended Tests */}
         {recommended_tests?.length > 0 && (
-          <Section icon={FlaskConical} title="Recommended Tests" color="text-cyan-500" count={recommended_tests.length} defaultOpen={false}>
+          <Section icon={FlaskConical} title="Recommended Tests" color="text-cyan-500" count={recommended_tests.length}>
             <div className="space-y-1">
               {recommended_tests.map((test, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm py-0.5">
@@ -668,7 +574,7 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
 
         {/* Risk Factors */}
         {risk_factors?.length > 0 && (
-          <Section icon={ShieldAlert} title="Risk Factors" color="text-orange-500" count={risk_factors.length} defaultOpen={false}>
+          <Section icon={ShieldAlert} title="Risk Factors" color="text-orange-500" count={risk_factors.length}>
             <div className="flex flex-wrap gap-1.5">
               {risk_factors.map((rf, i) => (
                 <Badge key={i} className="bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 border border-orange-200/70 dark:border-orange-800/40">
@@ -704,13 +610,6 @@ export default function ClinicalNote({ data, processing, sessionId, transcript =
           </Section>
         )}
       </div>
-
-      {selectedDrug && (
-        <DrugAlternatives
-          drugName={selectedDrug}
-          onClose={() => setSelectedDrug(null)}
-        />
-      )}
     </div>
   )
 }

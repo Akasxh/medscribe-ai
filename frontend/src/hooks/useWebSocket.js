@@ -20,23 +20,6 @@ export default function useWebSocket(sessionId) {
   const [interimText, setInterimText] = useState('')
   const [totalTranscriptLength, setTotalTranscriptLength] = useState(0)
 
-  // Reset all state when sessionId changes (new consultation)
-  const prevSessionRef = useRef(sessionId)
-  useEffect(() => {
-    if (prevSessionRef.current !== sessionId) {
-      prevSessionRef.current = sessionId
-      setClinicalNote(null)
-      setFhirBundle(null)
-      setFhirQuality(null)
-      setCdsAlerts([])
-      setProcessing(false)
-      setError(null)
-      setInterimText('')
-      setTotalTranscriptLength(0)
-      reconnectAttemptsRef.current = 0
-    }
-  }, [sessionId])
-
   const connect = useCallback(() => {
     if (!sessionId) return
     if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) return
@@ -80,7 +63,6 @@ export default function useWebSocket(sessionId) {
               setProcessing(false)
               if (msg.status === 'completed') {
                 showToast('Clinical note generated successfully', 'success')
-                try { localStorage.removeItem('medscribe_autosave') } catch {}
               }
             }
             break
@@ -93,8 +75,6 @@ export default function useWebSocket(sessionId) {
             break
           case 'session_complete':
             setProcessing(false)
-            // Clear autosave — session processed successfully
-            try { localStorage.removeItem('medscribe_autosave') } catch {}
             break
           case 'error':
             setError(msg.message)
@@ -103,21 +83,20 @@ export default function useWebSocket(sessionId) {
         }
       } catch (e) {
         console.error('WS parse error:', e)
-        setProcessing(false)
       }
     }
 
     ws.onclose = (event) => {
       setConnected(false)
       // Auto-reconnect on unclean close if under max attempts
-      if (!intentionalCloseRef.current && !event.wasClean) {
+      if (!intentionalCloseRef.current && !event.wasClean && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 10000)
         reconnectAttemptsRef.current += 1
-        if (reconnectAttemptsRef.current <= MAX_RECONNECT_ATTEMPTS) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current - 1), 10000)
-          reconnectTimerRef.current = setTimeout(() => connect(), delay)
-        } else {
-          setError('Connection lost. Please refresh the page.')
-        }
+        reconnectTimerRef.current = setTimeout(() => connect(), delay)
+      }
+
+      if (!intentionalCloseRef.current && reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+        setError('Connection lost. Please refresh the page.')
       }
     }
 
@@ -143,13 +122,6 @@ export default function useWebSocket(sessionId) {
   }, [])
 
   const sendTranscript = useCallback((text, isFinal) => {
-    // Optimistically clear interim text the moment a final transcript is
-    // committed locally, rather than waiting for the backend transcript_ack.
-    // This eliminates the visual duplication window where the same text
-    // appears both in transcriptLines and in interimText simultaneously.
-    if (isFinal) {
-      setInterimText('')
-    }
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'transcript',
@@ -167,30 +139,14 @@ export default function useWebSocket(sessionId) {
   }, [])
 
   const sendStop = useCallback(() => {
-    const ws = wsRef.current
-    if (!ws) return
-    const msg = JSON.stringify({ type: 'stop' })
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(msg)
-    } else if (ws.readyState === WebSocket.CONNECTING) {
-      // Queue until open so stop message isn't silently dropped
-      const onOpen = () => {
-        ws.removeEventListener('open', onOpen)
-        if (ws.readyState === WebSocket.OPEN) ws.send(msg)
-      }
-      ws.addEventListener('open', onOpen)
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'stop' }))
     }
   }, [])
 
   const sendSpecialty = useCallback((specialty) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'specialty', specialty }))
-    }
-  }, [])
-
-  const sendDoctorInfo = useCallback((doctorName) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'doctor_info', doctor_name: doctorName }))
     }
   }, [])
 
@@ -220,7 +176,6 @@ export default function useWebSocket(sessionId) {
     sendProcess,
     sendStop,
     sendSpecialty,
-    sendDoctorInfo,
     sendAbhaId,
-  }), [connected, clinicalNote, fhirBundle, fhirQuality, cdsAlerts, processing, error, interimText, totalTranscriptLength, connect, disconnect, sendTranscript, sendProcess, sendStop, sendSpecialty, sendDoctorInfo, sendAbhaId])
+  }), [connected, clinicalNote, fhirBundle, fhirQuality, cdsAlerts, processing, error, interimText, totalTranscriptLength, connect, disconnect, sendTranscript, sendProcess, sendStop, sendSpecialty, sendAbhaId])
 }

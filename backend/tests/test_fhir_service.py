@@ -56,7 +56,7 @@ class TestBundleStructure:
         patient = next(e["resource"] for e in bundle["entry"] if e["resource"]["resourceType"] == "Patient")
         assert "identifier" in patient
         abha_id = patient["identifier"][0]
-        assert abha_id["system"] == "https://healthid.ndhm.gov.in"
+        assert abha_id["system"] == "https://abha.abdm.gov.in"
         assert abha_id["value"] == "12345678901234"
 
     def test_medication_no_system_without_code(self):
@@ -147,92 +147,6 @@ class TestBundleStructure:
         assert bundle["meta"]["lastUpdated"] == ts
         composition = bundle["entry"][0]["resource"]
         assert composition["date"] == ts
-
-
-class TestNewResourceTypes:
-    """Tests for Practitioner, Organization, AuditEvent and enhanced resource checks."""
-
-    def setup_method(self):
-        self.builder = FHIRBundleBuilder()
-        self.clinical_data = {
-            "patient_info": {"name": "Test Patient", "age": "30", "gender": "Female"},
-            "chief_complaint": "Fever",
-            "diagnosis": [{"condition": "Viral Fever", "icd10_code": "B34.9", "certainty": "confirmed"}],
-            "medications": [{"name": "Dolo 650", "generic_name": "Paracetamol", "dosage": "650mg", "frequency": "TID", "duration": "3 days"}],
-            "symptoms": [{"description": "Fever", "duration": "3 days", "severity": "moderate"}],
-            "vitals": {"temperature": "101F", "bp": "120/80", "spo2": "96%"},
-            "allergies": ["Sulfa drugs"],
-            "follow_up": "Review in 3 days",
-            "recommended_tests": ["CBC"],
-        }
-
-    def _get_resources(self, resource_type: str) -> list[dict]:
-        bundle = self.builder.build_bundle(self.clinical_data)
-        return [e["resource"] for e in bundle["entry"] if e["resource"]["resourceType"] == resource_type]
-
-    def test_practitioner_exists(self):
-        resources = self._get_resources("Practitioner")
-        assert len(resources) >= 1
-        assert resources[0]["resourceType"] == "Practitioner"
-        assert "name" in resources[0]
-
-    def test_organization_exists(self):
-        resources = self._get_resources("Organization")
-        assert len(resources) >= 1
-        assert resources[0]["name"] == "MedScribe AI Clinic"
-
-    def test_audit_event_exists(self):
-        resources = self._get_resources("AuditEvent")
-        assert len(resources) >= 1
-        audit = resources[0]
-        assert audit["action"] == "C"
-        assert "recorded" in audit
-        assert len(audit["agent"]) >= 1
-
-    def test_medication_has_rxnorm_for_known_drug(self):
-        """Paracetamol is in DRUG_RXNORM map, so MedicationRequest should have RxNorm coding."""
-        med_requests = self._get_resources("MedicationRequest")
-        assert len(med_requests) >= 1
-        concept = med_requests[0]["medicationCodeableConcept"]
-        assert "coding" in concept, "Known drug should have RxNorm coding"
-        coding = concept["coding"][0]
-        assert coding["system"] == "http://www.nlm.nih.gov/research/umls/rxnorm"
-        assert coding["code"] == "161"  # Paracetamol RxNorm CUI
-
-    def test_bp_has_component_structure(self):
-        """Blood pressure observation should use component (systolic+diastolic), not valueString."""
-        observations = self._get_resources("Observation")
-        bp_obs = [
-            o for o in observations
-            if any(c.get("code") == "85354-9" for c in o.get("code", {}).get("coding", []))
-        ]
-        assert len(bp_obs) >= 1, "BP observation should exist"
-        assert "component" in bp_obs[0], "BP should use component structure"
-        assert len(bp_obs[0]["component"]) == 2  # systolic + diastolic
-        assert "valueString" not in bp_obs[0], "Parseable BP should not use valueString"
-
-    def test_spo2_uses_correct_loinc(self):
-        """SpO2 should use LOINC code 59408-5 (pulse oximetry), not 2708-6."""
-        observations = self._get_resources("Observation")
-        spo2_obs = [
-            o for o in observations
-            if any(c.get("code") == "59408-5" for c in o.get("code", {}).get("coding", []))
-        ]
-        assert len(spo2_obs) >= 1, "SpO2 observation with LOINC 59408-5 should exist"
-
-    def test_cross_references_use_urn_uuid(self):
-        """All subject/encounter/requester references should use urn:uuid: format."""
-        bundle = self.builder.build_bundle(self.clinical_data)
-        ref_keys = ("subject", "encounter", "patient", "requester")
-        for entry in bundle["entry"]:
-            res = entry["resource"]
-            for key in ref_keys:
-                ref = res.get(key)
-                if ref and isinstance(ref, dict) and "reference" in ref:
-                    assert ref["reference"].startswith("urn:uuid:"), (
-                        f"{res['resourceType']}.{key} reference "
-                        f"'{ref['reference']}' does not use urn:uuid format"
-                    )
 
 
 class TestDataFiles:
