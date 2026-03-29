@@ -47,7 +47,7 @@ async def transcribe_audio(
                     files={"file": ("audio.wav", audio_file, "audio/wav")},
                     data={
                         "language_code": language_code,
-                        "model": "saaras:v2",
+                        "model": "saaras:v3",
                         "with_timestamps": "false",
                     },
                 )
@@ -83,17 +83,16 @@ async def transcribe_audio(
 def get_stt_status() -> dict:
     """Return STT configuration status."""
     return {
-        "provider": "Sarvam AI (Saaras v2)",
+        "provider": "Sarvam AI (Saaras v3)",
         "api_configured": bool(os.getenv("SARVAM_API_KEY")),
         "supported_languages": [
-            "hi-IN", "en-IN", "ta-IN", "te-IN", "bn-IN",
-            "mr-IN", "gu-IN", "kn-IN", "ml-IN", "pa-IN",
-            "or-IN", "as-IN",
+            "unknown", "hi-IN", "en-IN", "bn-IN", "ta-IN", "te-IN",
+            "mr-IN", "gu-IN", "kn-IN", "ml-IN", "pa-IN", "od-IN",
+            "ur-IN", "as-IN", "ne-IN",
         ],
         "features": [
-            "22 Indian languages",
-            "Code-mixed support",
-            "Hinglish",
-            "Tanglish",
+            "23 Indian languages",
+            "Code-mixed support (Hinglish, Tanglish)",
+            "Auto language detection",
         ],
     }
