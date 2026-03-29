@@ -83,9 +83,9 @@ No other AI scribe understands the Indian pharmaceutical landscape. MedScribe AI
 
 ### Admin Dashboard
 
-| Login | Role-Based Auth |
-|:-:|:-:|
-| ![Login](docs/screenshots/01-login-page.png) | ![Doctor Sign In](docs/screenshots/02-doctor-signin.png) |
+| Login | Doctor Sign In | Admin Dashboard |
+|:-:|:-:|:-:|
+| ![Login](docs/screenshots/01-login-page.png) | ![Doctor Sign In](docs/screenshots/02-doctor-signin.png) | ![Admin](docs/screenshots/06-admin-dashboard.png) |
 
 The admin dashboard features:
 - **KPI Cards** — total consultations, active doctors, avg safety score, FHIR grade A%, prescriptions
