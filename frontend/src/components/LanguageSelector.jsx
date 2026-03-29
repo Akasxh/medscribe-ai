@@ -1,4 +1,4 @@
-import { Languages, ChevronDown } from 'lucide-react'
+import { Languages, Mic, Server, ChevronDown } from 'lucide-react'
 
 const LANGUAGES = [
   { code: 'hi-IN', label: 'Hindi', native: 'हिन्दी' },
@@ -13,7 +13,7 @@ const LANGUAGES = [
   { code: 'ml-IN', label: 'Malayalam', native: 'മലയാളം' },
 ]
 
-export default function LanguageSelector({ value, onChange }) {
+export default function LanguageSelector({ value, onChange, useSarvam, onSarvamChange }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <Languages className="w-4 h-4 text-slate-400 shrink-0" />
@@ -32,6 +32,32 @@ export default function LanguageSelector({ value, onChange }) {
         </select>
         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
       </div>
+
+      {/* STT provider toggle */}
+      <button
+        onClick={() => onSarvamChange?.(!useSarvam)}
+        className={`flex items-center gap-1.5 px-2.5 py-2 min-h-[40px] text-xs font-medium rounded-lg border transition-all ${
+          useSarvam
+            ? 'bg-violet-50 dark:bg-violet-950/40 border-violet-300 dark:border-violet-700 text-violet-700 dark:text-violet-300'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+        }`}
+        title={useSarvam ? 'Using Sarvam AI (server-side, all browsers)' : 'Using Browser STT (Chrome only)'}
+        aria-label="Toggle STT provider"
+      >
+        {useSarvam ? (
+          <>
+            <Server className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Sarvam AI</span>
+            <span className="sm:hidden">AI</span>
+          </>
+        ) : (
+          <>
+            <Mic className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Browser STT</span>
+            <span className="sm:hidden">Browser</span>
+          </>
+        )}
+      </button>
     </div>
   )
 }
