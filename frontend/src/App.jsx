@@ -56,7 +56,14 @@ function getOrCreateSessionId() {
 function loadUser() {
   try {
     const raw = localStorage.getItem('medscribe_user')
-    return raw ? JSON.parse(raw) : null
+    if (!raw) return null
+    const user = JSON.parse(raw)
+    // Force re-registration if required fields are missing
+    if (!user.name || !user.doctorId || !user.hospital || !user.patientName) {
+      localStorage.removeItem('medscribe_user')
+      return null
+    }
+    return user
   } catch {
     return null
   }
