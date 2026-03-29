@@ -147,8 +147,16 @@ export default function UserRegistration({ onRegister }) {
           </p>
         </div>
 
+        {/* Admin link */}
+        <a
+          href="/admin/login"
+          className="block text-center mt-4 text-xs text-slate-400 hover:text-violet-600 transition-colors"
+        >
+          Hospital Admin? Sign in here →
+        </a>
+
         {/* Footer */}
-        <p className="text-center mt-6 text-[10px] text-slate-400 dark:text-slate-600">
+        <p className="text-center mt-3 text-[10px] text-slate-400 dark:text-slate-600">
           HACKMATRIX 2.0 — Jilo Health x NJACK IIT Patna
         </p>
       </div>

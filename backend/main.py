@@ -84,6 +84,9 @@ app.add_middleware(
 app.include_router(transcribe_router)
 app.include_router(sessions_router)
 
+from routers.sessions import admin_router
+app.include_router(admin_router)
+
 
 @app.on_event("startup")
 async def startup_health_check():
