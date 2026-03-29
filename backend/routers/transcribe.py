@@ -13,6 +13,7 @@ from services.fhir_service import FHIRBundleBuilder
 from services.cds_service import check_clinical_alerts
 from services.terminology_service import validate_clinical_data
 from services.stt_service import transcribe_audio, get_stt_status
+from services.supabase_service import save_consultation
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
 
     session = sessions_store[session_id]
     specialty = "general"
+    doctor_name = ""
     abha_id = None
     fhir_builder = FHIRBundleBuilder()
     processing_lock = asyncio.Lock()
@@ -151,6 +153,10 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                     }
                 )
 
+            elif msg_type == "doctor_info":
+                doctor_name = message.get("doctor_name", "")
+                await websocket.send_json({"type": "doctor_info_ack"})
+
             elif msg_type == "abha_id":
                 abha_id = message.get("abha_id")
                 await websocket.send_json({"type": "abha_id_ack", "abha_id": abha_id})
@@ -167,6 +173,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                             fhir_builder,
                             specialty=specialty,
                             abha_id=abha_id,
+                            doctor_name=doctor_name,
                         )
                     else:
                         logger.info(
@@ -191,6 +198,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                             fhir_builder,
                             specialty=specialty,
                             abha_id=abha_id,
+                            doctor_name=doctor_name,
                         )
                     elif full_text:
                         logger.info(
@@ -335,6 +343,7 @@ async def _process_and_send(
     fhir_builder: FHIRBundleBuilder,
     specialty: str = "general",
     abha_id: str | None = None,
+    doctor_name: str = "",
 ):
     """Run Gemini extraction and FHIR bundle generation, send results."""
     cleaned = transcript_text.strip()
@@ -511,6 +520,18 @@ async def _process_and_send(
             len(fhir_bundle.get("entry", [])),
             len(cds_alerts),
         )
+
+        # Persist to Supabase (fire-and-forget — failure won't break the session)
+        asyncio.create_task(save_consultation(
+            session_id=session.id,
+            doctor_name=doctor_name,
+            specialty=specialty,
+            transcript=session.transcript,
+            clinical_data=clinical_data,
+            fhir_bundle=fhir_bundle,
+            fhir_quality=fhir_quality,
+            cds_alerts=cds_alerts,
+        ))
 
     except Exception as e:
         logger.error("Processing error for session %s: %s", session.id, e, exc_info=True)
