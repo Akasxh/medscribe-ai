@@ -77,31 +77,6 @@ export default function App() {
   const hasStartedRef = useRef(false)
   // Set-based dedup for all final transcripts (live + demo) — catches non-consecutive duplicates
   const seenFinalsRef = useRef(new Set())
-  const [uploadStatus, setUploadStatus] = useState(null)
-
-  const handleUploadToDB = useCallback(async () => {
-    if (!ws.clinicalNote || uploadStatus === 'uploading') return
-    setUploadStatus('uploading')
-    try {
-      const res = await fetch('/api/sessions/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          doctor_name: user?.name || '',
-          hospital: user?.hospital || '',
-          patient_name: user?.patientName || '',
-          specialty,
-          transcript: transcriptLines.join(' '),
-          clinical_note: ws.clinicalNote,
-          fhir_bundle: ws.fhirBundle,
-          fhir_quality: ws.fhirQuality,
-          cds_alerts: ws.cdsAlerts,
-        }),
-      })
-      setUploadStatus(res.ok ? 'success' : 'error')
-    } catch { setUploadStatus('error') }
-  }, [ws, sessionId, user, specialty, transcriptLines, uploadStatus])
 
   const handleRegister = useCallback((newUser) => {
     setUser(newUser)
@@ -481,25 +456,6 @@ export default function App() {
                 elapsed={recorder.elapsed}
               />
             </Suspense>
-
-            {ws.clinicalNote && (
-              <div className="card p-4">
-                <button
-                  onClick={handleUploadToDB}
-                  disabled={uploadStatus === 'uploading' || uploadStatus === 'success'}
-                  className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm transition-all ${
-                    uploadStatus === 'success'
-                      ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-200'
-                      : uploadStatus === 'error'
-                        ? 'bg-red-50 text-red-700 border-2 border-red-200'
-                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-                  } disabled:opacity-60`}
-                >
-                  {uploadStatus === 'uploading' && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                  {uploadStatus === 'uploading' ? 'Uploading...' : uploadStatus === 'success' ? '✓ Saved to Hospital Database' : uploadStatus === 'error' ? 'Failed — Tap to Retry' : '☁ Save to Hospital Database'}
-                </button>
-              </div>
-            )}
           </>
         )}
 

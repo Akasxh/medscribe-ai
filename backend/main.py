@@ -84,11 +84,6 @@ app.add_middleware(
 app.include_router(transcribe_router)
 app.include_router(sessions_router)
 
-from routers.sessions import admin_router
-from routers.admin_pages import admin_pages_router
-app.include_router(admin_router)
-app.include_router(admin_pages_router)
-
 
 @app.on_event("startup")
 async def startup_health_check():
@@ -126,7 +121,7 @@ if os.path.exists(_static_dir):
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str) -> FileResponse:
         """SPA fallback: serve index.html for all non-API/WS routes."""
-        if full_path.startswith(("api/", "ws/", "rx/", "admin/")):
+        if full_path.startswith(("api/", "ws/", "rx/")):
             raise HTTPException(status_code=404, detail="Not found")
         safe_root = pathlib.Path(_static_dir).resolve()
         requested = (safe_root / full_path).resolve()

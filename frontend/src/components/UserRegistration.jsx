@@ -11,15 +11,16 @@ export default function UserRegistration({ onRegister }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     const trimmed = name.trim()
-    if (!trimmed) { setError('Please enter your name'); return }
-    if (!patientName.trim()) { setError('Please enter patient name'); return }
-    if (!hospital.trim()) { setError('Please enter hospital/clinic name'); return }
+    if (!trimmed) {
+      setError('Please enter your name')
+      return
+    }
 
     const user = {
       name: trimmed,
       doctorId: doctorId.trim() || null,
-      hospital: hospital.trim(),
-      patientName: patientName.trim(),
+      hospital: hospital.trim() || null,
+      patientName: patientName.trim() || null,
       registeredAt: new Date().toISOString(),
     }
 
@@ -92,7 +93,8 @@ export default function UserRegistration({ onRegister }) {
             {/* Hospital / Clinic */}
             <div>
               <label htmlFor="reg-hospital" className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
-                Hospital / Clinic Name <span className="text-red-500">*</span>
+                Hospital / Clinic Name
+                <span className="text-slate-400 font-normal ml-1">(optional)</span>
               </label>
               <div className="relative">
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -110,7 +112,8 @@ export default function UserRegistration({ onRegister }) {
             {/* Patient Name (optional - for this consultation) */}
             <div>
               <label htmlFor="reg-patient" className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
-                Patient Name <span className="text-red-500">*</span>
+                Patient Name
+                <span className="text-slate-400 font-normal ml-1">(for this consultation)</span>
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -119,7 +122,7 @@ export default function UserRegistration({ onRegister }) {
                   type="text"
                   value={patientName}
                   onChange={(e) => setPatientName(e.target.value)}
-                  placeholder="Patient's full name"
+                  placeholder="Patient's name (optional)"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                 />
               </div>
@@ -144,10 +147,8 @@ export default function UserRegistration({ onRegister }) {
           </p>
         </div>
 
-        <a href="/admin/login" className="block text-center mt-4 text-xs text-slate-400 hover:text-violet-600 transition-colors">
-          Hospital Admin? Sign in here →
-        </a>
-        <p className="text-center mt-3 text-[10px] text-slate-400 dark:text-slate-600">
+        {/* Footer */}
+        <p className="text-center mt-6 text-[10px] text-slate-400 dark:text-slate-600">
           HACKMATRIX 2.0 — Jilo Health x NJACK IIT Patna
         </p>
       </div>
