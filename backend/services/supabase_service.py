@@ -82,6 +82,7 @@ async def persist_session(
     fhir_quality: dict | None,
     cds_alerts: list | None,
     specialty: str = "general",
+    doctor_name: str = "",
 ) -> bool:
     """Upsert consultation + related rows to Supabase.
 
@@ -111,12 +112,24 @@ async def persist_session(
         return _to_plain(item) if not isinstance(item, dict) else item
 
     try:
-        # 1. Upsert consultation
+        # 1. Upsert consultation — store all queryable fields at top level
+        patient_name = ""
+        if clinical_data:
+            pi = clinical_data.get("patient_info") or {}
+            if hasattr(pi, "get"):
+                patient_name = pi.get("name", "") or ""
+            elif hasattr(pi, "name"):
+                patient_name = pi.name or ""
+
         consultation_row: dict[str, Any] = {
             "id": session_id,
             "status": "completed",
             "specialty": specialty,
             "transcript": transcript.strip() if transcript else "",
+            "doctor_name": doctor_name or "",
+            "patient_name": patient_name,
+            "cds_alerts": _to_plain_list(cds_alerts),
+            "fhir_quality": _to_plain_dict(fhir_quality) if fhir_quality else None,
         }
         if doctor_id:
             consultation_row["doctor_id"] = doctor_id
@@ -212,9 +225,23 @@ async def persist_session(
 
     except Exception as exc:
         logger.error(
-            "Failed to persist session %s to Supabase: %s",
+            "Failed to persist session %s to Supabase (will retry): %s",
             session_id,
             exc,
             exc_info=True,
         )
-        return False
+        # Retry once after 2s for transient failures
+        try:
+            await asyncio.sleep(2)
+            await asyncio.to_thread(
+                lambda: client.table("consultations").upsert(
+                    consultation_row, on_conflict="id"
+                ).execute()
+            )
+            logger.info("Session %s persisted on retry", session_id)
+            return True
+        except Exception as retry_exc:
+            logger.error(
+                "Retry also failed for session %s: %s", session_id, retry_exc
+            )
+            return False

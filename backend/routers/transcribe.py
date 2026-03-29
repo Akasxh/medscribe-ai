@@ -120,6 +120,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
 
     session = sessions_store[session_id]
     specialty = "general"
+    doctor_name = ""
     abha_id = None
     fhir_builder = FHIRBundleBuilder()
     processing_lock = asyncio.Lock()
@@ -201,6 +202,10 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
                         "specialty": specialty,
                     }
                 )
+
+            elif msg_type == "doctor_info":
+                doctor_name = message.get("doctor_name", "")
+                await websocket.send_json({"type": "doctor_info_ack", "doctor_name": doctor_name})
 
             elif msg_type == "abha_id":
                 abha_id = message.get("abha_id")
@@ -581,13 +586,14 @@ async def _process_and_send(
             task = asyncio.create_task(
                 _persist_to_supabase(
                     session_id=session.id,
-                    doctor_id=None,  # TODO: wire doctor_id from auth
+                    doctor_id=None,
                     transcript=session.transcript,
                     clinical_data=clinical_data,
                     fhir_bundle=fhir_bundle,
                     fhir_quality=fhir_quality,
                     cds_alerts=cds_alerts,
                     specialty=specialty,
+                    doctor_name=doctor_name,
                 )
             )
             _background_tasks.add(task)

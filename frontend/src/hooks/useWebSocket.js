@@ -188,6 +188,12 @@ export default function useWebSocket(sessionId) {
     }
   }, [])
 
+  const sendDoctorInfo = useCallback((doctorName) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'doctor_info', doctor_name: doctorName }))
+    }
+  }, [])
+
   const sendAbhaId = useCallback((abhaId) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'abha_id', abha_id: abhaId }))
@@ -214,6 +220,7 @@ export default function useWebSocket(sessionId) {
     sendProcess,
     sendStop,
     sendSpecialty,
+    sendDoctorInfo,
     sendAbhaId,
-  }), [connected, clinicalNote, fhirBundle, fhirQuality, cdsAlerts, processing, error, interimText, totalTranscriptLength, connect, disconnect, sendTranscript, sendProcess, sendStop, sendSpecialty, sendAbhaId])
+  }), [connected, clinicalNote, fhirBundle, fhirQuality, cdsAlerts, processing, error, interimText, totalTranscriptLength, connect, disconnect, sendTranscript, sendProcess, sendStop, sendSpecialty, sendDoctorInfo, sendAbhaId])
 }

@@ -94,13 +94,18 @@ admin_router = APIRouter(prefix="/api", tags=["admin"])
 
 
 @admin_router.get("/admin/consultations")
-async def list_all_consultations() -> list[dict[str, Any]]:
+async def list_all_consultations(
+    doctor_name: str = Query(default="", description="Filter by doctor name"),
+    specialty: str = Query(default="", description="Filter by specialty"),
+    from_date: str = Query(default="", description="Filter from date (ISO format)"),
+    to_date: str = Query(default="", description="Filter to date (ISO format)"),
+    limit: int = Query(default=200, ge=1, le=500, description="Max results"),
+) -> list[dict[str, Any]]:
     """Admin endpoint: fetch all consultations from Supabase with joined data."""
     from services.supabase_service import get_service_client
 
     client = get_service_client()
     if not client:
-        # Fallback to in-memory sessions
         return [
             s.model_dump()
             for s in sorted(
@@ -111,25 +116,43 @@ async def list_all_consultations() -> list[dict[str, Any]]:
         ]
 
     try:
-        result = await asyncio.to_thread(
-            lambda: client.table("consultations")
+        query = (
+            client.table("consultations")
             .select("*, clinical_notes(*), fhir_bundles(*)")
             .order("created_at", desc=True)
-            .limit(100)
-            .execute()
+            .limit(limit)
         )
-        # Supabase returns arrays for joined tables — normalize to single objects
+        # Apply filters
+        if doctor_name:
+            query = query.ilike("doctor_name", f"%{doctor_name}%")
+        if specialty:
+            query = query.eq("specialty", specialty)
+        if from_date:
+            query = query.gte("created_at", from_date)
+        if to_date:
+            query = query.lte("created_at", to_date)
+
+        result = await asyncio.to_thread(lambda: query.execute())
+
         for row in result.data:
             notes = row.pop("clinical_notes", [])
             row["clinical_note"] = notes[0] if notes else None
             bundles = row.pop("fhir_bundles", [])
-            row["fhir_bundle"] = bundles[0] if bundles else None
-            row.setdefault("cds_alerts", [])
-            row.setdefault("fhir_quality", None)
+            bundle = bundles[0] if bundles else None
+            row["fhir_bundle"] = bundle.get("bundle") if bundle else None
+            # Map fhir_quality from the joined fhir_bundles row
+            if bundle and (bundle.get("quality_score") or bundle.get("quality_grade")):
+                row["fhir_quality"] = {
+                    "score": bundle.get("quality_score"),
+                    "grade": bundle.get("quality_grade"),
+                }
+            else:
+                row.setdefault("fhir_quality", row.get("fhir_quality"))
+            # cds_alerts now stored in consultations table directly
+            row.setdefault("cds_alerts", row.get("cds_alerts") or [])
         return result.data  # type: ignore[return-value]
     except Exception as exc:
         logger.error("Failed to fetch consultations from Supabase: %s", exc)
-        # Fallback to in-memory
         return [
             s.model_dump()
             for s in sorted(

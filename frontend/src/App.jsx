@@ -201,9 +201,13 @@ export default function App() {
     // Guard against double-tap: if already recording, don't start a second instance
     if (recorder.isRecording) return
     ws.connect()
+    // Send doctor identity after connection opens
+    setTimeout(() => {
+      if (user?.name) ws.sendDoctorInfo(user.name)
+    }, 500)
     hasStartedRef.current = true
     recorder.startRecording()
-  }, [ws, recorder, consented])
+  }, [ws, recorder, consented, user])
 
   const handleStop = useCallback(() => {
     recorder.stopRecording()
