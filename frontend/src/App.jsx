@@ -73,7 +73,7 @@ export default function App() {
   const [consented, setConsented] = useState(() => sessionStorage.getItem('medscribe_consent') === 'true')
   const [patientName, setPatientName] = useState('')
   const [speechLang, setSpeechLang] = useState('hi-IN')
-  const [useSarvam, setUseSarvam] = useState(false)
+  const [useSarvam, setUseSarvam] = useState(true)
   const [demoPlaying, setDemoPlaying] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
   const hasStartedRef = useRef(false)
@@ -346,7 +346,7 @@ export default function App() {
             {/* Recording card — compact with inline demo toggle */}
             <div className="card p-3">
               <div className="flex items-center justify-between gap-3 mb-2">
-                <LanguageSelector value={speechLang} onChange={handleSpeechLangChange} useSarvam={useSarvam} onSarvamChange={setUseSarvam} />
+                <LanguageSelector value={speechLang} onChange={handleSpeechLangChange} />
               </div>
               <RecordButton
                 isRecording={recorder.isRecording}
