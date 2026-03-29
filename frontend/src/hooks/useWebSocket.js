@@ -20,6 +20,23 @@ export default function useWebSocket(sessionId) {
   const [interimText, setInterimText] = useState('')
   const [totalTranscriptLength, setTotalTranscriptLength] = useState(0)
 
+  // Reset all state when sessionId changes (new consultation)
+  const prevSessionRef = useRef(sessionId)
+  useEffect(() => {
+    if (prevSessionRef.current !== sessionId) {
+      prevSessionRef.current = sessionId
+      setClinicalNote(null)
+      setFhirBundle(null)
+      setFhirQuality(null)
+      setCdsAlerts([])
+      setProcessing(false)
+      setError(null)
+      setInterimText('')
+      setTotalTranscriptLength(0)
+      reconnectAttemptsRef.current = 0
+    }
+  }, [sessionId])
+
   const connect = useCallback(() => {
     if (!sessionId) return
     if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) return
@@ -63,6 +80,7 @@ export default function useWebSocket(sessionId) {
               setProcessing(false)
               if (msg.status === 'completed') {
                 showToast('Clinical note generated successfully', 'success')
+                try { localStorage.removeItem('medscribe_autosave') } catch {}
               }
             }
             break
@@ -75,6 +93,8 @@ export default function useWebSocket(sessionId) {
             break
           case 'session_complete':
             setProcessing(false)
+            // Clear autosave — session processed successfully
+            try { localStorage.removeItem('medscribe_autosave') } catch {}
             break
           case 'error':
             setError(msg.message)

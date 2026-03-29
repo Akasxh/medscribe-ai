@@ -93,8 +93,8 @@ export default function App() {
       const raw = localStorage.getItem(AUTOSAVE_KEY)
       if (raw) {
         const saved = JSON.parse(raw)
-        // Only show recovery if less than 24 hours old
-        if (saved.transcriptLines?.length > 0 && Date.now() - saved.timestamp < 86400000) {
+        // Only show recovery if less than 1 hour old and has content
+        if (saved.transcriptLines?.length > 0 && Date.now() - saved.timestamp < 3600000) {
           setAutosaveRecovery(saved)
         } else {
           localStorage.removeItem(AUTOSAVE_KEY)

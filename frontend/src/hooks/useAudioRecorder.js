@@ -116,12 +116,17 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
         }
 
         if (['network', 'audio-capture', 'service-not-allowed'].includes(error)) {
-          isRecordingRef.current = false
-          setIsRecording(false)
-          if (timerRef.current) {
-            clearInterval(timerRef.current)
-            timerRef.current = null
+          // Don't kill recording for transient network errors — let onend restart
+          // Only stop for persistent failures (audio-capture = mic disconnected)
+          if (error === 'audio-capture' || error === 'service-not-allowed') {
+            isRecordingRef.current = false
+            setIsRecording(false)
+            if (timerRef.current) {
+              clearInterval(timerRef.current)
+              timerRef.current = null
+            }
           }
+          // network errors: let onend handler auto-restart via createAndStart()
         }
       }
 
