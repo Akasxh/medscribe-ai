@@ -30,11 +30,11 @@ export default function ProtectedRoute({ role, children }) {
     effectiveUser = supabaseUser
     effectiveRole = supabaseRole
   } else {
-    // Fallback to localStorage — never grant admin role without Supabase auth
+    // Fallback to localStorage — role comes from backend-verified login
     const localUser = loadLocalUser()
     if (localUser) {
       effectiveUser = localUser
-      effectiveRole = 'doctor'
+      effectiveRole = localUser.role || 'doctor'
     }
   }
 
