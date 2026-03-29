@@ -39,7 +39,7 @@
   "Epilepsy": "G40.9",
   "Peptic Ulcer": "K27.9",
   "NAFLD": "K76.0",
-  "Fatty Liver": "K76.0",
+  "Fatty Liver": "K76.89",
   "COVID-19": "U07.1",
   "Hepatitis A": "B15.9",
   "Hepatitis B": "B16.9",

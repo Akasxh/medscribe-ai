@@ -57,7 +57,7 @@ Return a JSON object with exactly these fields:
     }
   ],
   "observations": ["string - clinical observations/findings in English"],
-  "allergies": ["string - known allergies"],
+  "allergies": ["string - known allergies (bare allergen name only, e.g. 'Penicillin', not 'Penicillin allergy')"],
   "differential_diagnosis": [
     {
       "condition": "string - possible diagnosis",
@@ -137,7 +137,7 @@ Return a JSON object with exactly these fields:
    - Pan-D → Pantoprazole 40mg + Domperidone 30mg
    - Shelcal → Calcium + Vitamin D3
    - Glycomet → Metformin 500mg
-   - Cetrizine → Cetirizine 10mg
+   - Cetirizine → Cetirizine 10mg
    - Allegra → Fexofenadine 120mg
    - Augmentin → Amoxicillin + Clavulanic Acid 625mg
    - Amoxyclav → Amoxicillin + Clavulanic Acid 625mg
@@ -208,14 +208,7 @@ Return a JSON object with exactly these fields:
 10. **clinical_notes**: Write a professional, well-formatted English clinical note suitable for medical records.
 11. **Short or unclear transcripts**: If the transcript is very short, incomplete, or unclear, extract whatever you can. Use null for missing fields and empty arrays for missing lists. Always return valid JSON matching the schema — never return an error message or explanation instead of the JSON.
 12. **Always return the full schema**: Even if no useful information can be extracted, return the complete JSON structure with null values and empty arrays. Never omit fields.
-13. **Citation guidelines**: For each diagnosis, cite 1-3 relevant guidelines from:
-    - ICMR Standard Treatment Workflows (STW)
-    - WHO Clinical Guidelines
-    - API (Association of Physicians of India) Medicine Update
-    - NHM Treatment Protocols
-    - RSSDI Guidelines (diabetes)
-    - RNTCP (tuberculosis)
-    Never invent citations. Use empty array if uncertain.
+13. **Evidence strength**: For each diagnosis, assess evidence_strength as 'strong', 'moderate', or 'weak' based on the transcript data available. Do NOT generate citations or reference specific medical guidelines — use empty array for citations field.
 14. **Evidence fields**: Populate evidence_basis with specific transcript findings (symptoms, vitals, history) that support the diagnosis. Populate clinical_reasoning with the inferential step connecting evidence to diagnosis.
 """
 

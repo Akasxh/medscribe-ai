@@ -307,7 +307,7 @@ ALLERGY_RULES: list[AllergyRule] = [
         title="Penicillin allergy: Cephalosporin cross-reactivity risk",
         description=(
             "The patient has a documented penicillin allergy. Cephalosporins "
-            "share the beta-lactam ring structure and carry approximately 1-10% "
+            "share the beta-lactam ring structure and carry approximately 1-2% "
             "cross-reactivity risk. Use with caution and consider alternatives "
             "such as macrolides or fluoroquinolones."
         ),

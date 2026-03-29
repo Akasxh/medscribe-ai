@@ -348,6 +348,7 @@ body {
   .tab-bar-item {
     flex: 1;
     padding: 8px 12px;
+    min-height: 48px;
     border-radius: 8px;
     font-size: 13px;
     font-weight: 500;

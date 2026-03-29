@@ -82,9 +82,12 @@ const ResourceCard = React.memo(function ResourceCard({ resource, index }) {
       className={`border-l-[3px] ${colors.accent} border border-slate-200/70 dark:border-slate-700/50 rounded-r-lg rounded-l overflow-hidden transition-all duration-200 animate-slide-up bg-white dark:bg-slate-800/50`}
       style={{ animationDelay: `${index * 60}ms` }}
     >
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-3 py-2.5 flex items-center gap-2.5 text-left hover:bg-slate-50/80 dark:hover:bg-slate-700/20 transition-colors"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded) } }}
+        className="w-full px-3 py-2.5 flex items-center gap-2.5 text-left hover:bg-slate-50/80 dark:hover:bg-slate-700/20 transition-colors cursor-pointer"
       >
         <IconComponent className={`w-4 h-4 ${colors.text} shrink-0`} />
         <div className="flex-1 min-w-0">
@@ -103,7 +106,7 @@ const ResourceCard = React.memo(function ResourceCard({ resource, index }) {
             className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
           />
         </div>
-      </button>
+      </div>
 
       {expanded && (
         <div className="border-t border-slate-100 dark:border-slate-700/40 bg-slate-50/50 dark:bg-slate-900/40 p-3">

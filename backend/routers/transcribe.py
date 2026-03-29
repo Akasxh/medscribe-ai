@@ -272,7 +272,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
 
             else:
                 await _send_error(
-                    websocket, f"Unknown message type: {msg_type}"
+                    websocket, f"Unknown message type: {msg_type[:50]}"
                 )
 
     except WebSocketDisconnect:
@@ -286,8 +286,8 @@ async def _send_error(websocket: WebSocket, message: str) -> None:
     """Send an error message to the frontend, swallowing send failures."""
     try:
         await websocket.send_json({"type": "error", "message": message})
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Could not send error to WebSocket: %s", exc)
 
 
 def _calculate_fhir_quality(fhir_bundle: dict, clinical_data: dict) -> dict:
@@ -503,6 +503,7 @@ async def _process_and_send(
         except Exception as e:
             logger.error("CDS/terminology concurrent check failed: %s", e, exc_info=True)
             cds_alerts = []
+            await _send_error(websocket, "Safety checks encountered an error — prescribe with caution")
             terminology = {
                 "score_boost": 0,
                 "valid_count": 0,

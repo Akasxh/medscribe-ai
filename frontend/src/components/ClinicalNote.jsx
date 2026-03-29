@@ -745,6 +745,9 @@ function findChanges(original, edited, prefix = '') {
       for (let i = 0; i < editVal.length; i++) {
         if (i < origVal.length) {
           changes.push(...findChanges(origVal[i], editVal[i], `${path}.${i}`))
+        } else {
+          // New element appended beyond original array length
+          changes.push({ path: `${path}.${i}`, original: undefined, edited: editVal[i] })
         }
       }
     } else if (typeof editVal === 'object' && editVal && typeof origVal === 'object' && origVal) {

@@ -53,15 +53,16 @@ export default function useSafetyScore(cdsAlerts = [], fhirQuality = null, clini
         a.type === 'allergy_contraindication' || /allergy/i.test(a.title || '')
       )
 
-      if (hasAllergies && !hasAllergyAlert && hasMedications) {
-        // Allergies documented but no cross-check alert generated — could indicate missing validation
-        // Only deduct if there are medications that could interact
-        score -= 10
-        breakdown.push({
-          label: 'Allergies documented without cross-check',
-          delta: -10,
-        })
-      }
+      // Disabled: this deduction fires on safe prescriptions where the CDS engine
+      // correctly found no allergy contraindication. No deduction is warranted when
+      // the absence of an alert means the prescription is safe.
+      // if (hasAllergies && !hasAllergyAlert && hasMedications) {
+      //   score -= 10
+      //   breakdown.push({
+      //     label: 'Allergies documented without cross-check',
+      //     delta: -10,
+      //   })
+      // }
     }
 
     // FHIR quality deductions

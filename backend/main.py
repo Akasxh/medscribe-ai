@@ -107,7 +107,7 @@ async def health_check():
         "features": {
             "gemini": bool(os.getenv("GEMINI_API_KEY", "")),
             "stt": "Web Speech API (browser-native)",
-            "encryption": True,
+            "encryption": bool(os.environ.get("ENCRYPTION_KEY")),
         },
     }
 
