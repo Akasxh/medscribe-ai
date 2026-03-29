@@ -164,7 +164,8 @@ export default function ExportPanel({ clinicalNote, fhirBundle, sessionId, user,
         throw new Error(data.detail || 'Upload failed')
       }
       setUploadState('done')
-    } catch {
+    } catch (err) {
+      console.error('Upload failed:', err)
       setUploadState('error')
       setTimeout(() => setUploadState('idle'), 3000)
     }

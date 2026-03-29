@@ -225,8 +225,11 @@ async def list_consultations():
 @app.post("/api/upload-consultation")
 async def upload_consultation(req: UploadConsultationRequest):
     """Upload a completed consultation to Supabase."""
+    import logging
+    logger = logging.getLogger("medscribe")
     from services.supabase_service import save_consultation
 
+    logger.info("Upload request for session %s, doctor=%s", req.session_id, req.doctor_name)
     ok = await save_consultation(
         session_id=req.session_id,
         doctor_name=req.doctor_name,
@@ -238,6 +241,7 @@ async def upload_consultation(req: UploadConsultationRequest):
         cds_alerts=req.cds_alerts,
     )
     if not ok:
+        logger.error("Upload failed for session %s", req.session_id)
         raise HTTPException(status_code=500, detail="Failed to save — Supabase may not be configured")
     return {"success": True, "session_id": req.session_id}
 
