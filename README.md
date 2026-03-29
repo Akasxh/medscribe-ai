@@ -8,7 +8,7 @@
 [![FHIR R4](https://img.shields.io/badge/FHIR-R4_Compliant-059669?style=for-the-badge)](https://hl7.org/fhir/)
 [![ABDM](https://img.shields.io/badge/ABDM-NRCES_Ready-10b981?style=for-the-badge)](https://abdm.gov.in/)
 [![Languages](https://img.shields.io/badge/Languages-10_Indian-f59e0b?style=for-the-badge)]()
-[![Tests](https://img.shields.io/badge/Tests-61_Passing-22c55e?style=for-the-badge)]()
+[![Tests](https://img.shields.io/badge/Tests-65_Passing-22c55e?style=for-the-badge)]()
 
 A doctor opens the app, speaks with their patient in Hindi, English, or any of 10 Indian languages, and structured clinical notes + FHIR R4 resources + drug safety alerts appear in real-time.
 
@@ -103,7 +103,7 @@ No other AI scribe understands the Indian pharmaceutical landscape. MedScribe AI
 <td width="50%">
 
 ### Clinical Safety
-- **15 drug interaction rules** -- Aspirin+NSAID, Metformin+contrast, ACE+ARB, SSRI+NSAID, and more
+- **16 drug interaction rules** -- Aspirin+NSAID, Metformin+contrast, ACE+ARB, SSRI+NSAID, and more
 - **Allergy cross-reactivity** -- Penicillin-Cephalosporin, Sulfa drug, NSAID cross-reactivity detection
 - **Dosage validation** -- 10 dosage limit checks against known therapeutic ranges
 - **Patient safety score** -- real-time composite score (Safe / Caution / Warning / Critical) displayed prominently
@@ -159,7 +159,7 @@ graph LR
     subgraph Server["Backend (FastAPI)"]
         WS[WebSocket]
         GEM["Gemini 2.5 Flash"]
-        CDS["CDS Engine<br/>15 Interaction Rules"]
+        CDS["CDS Engine<br/>16 Interaction Rules"]
         FHIR["FHIR R4 Generator<br/>ABDM NRCES"]
         DRUG["Drug Reference<br/>75+ Indian Brands"]
         ENC["AES Encryption"]
