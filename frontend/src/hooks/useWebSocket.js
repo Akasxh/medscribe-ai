@@ -167,8 +167,18 @@ export default function useWebSocket(sessionId) {
   }, [])
 
   const sendStop = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'stop' }))
+    const ws = wsRef.current
+    if (!ws) return
+    const msg = JSON.stringify({ type: 'stop' })
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(msg)
+    } else if (ws.readyState === WebSocket.CONNECTING) {
+      // Queue until open so stop message isn't silently dropped
+      const onOpen = () => {
+        ws.removeEventListener('open', onOpen)
+        if (ws.readyState === WebSocket.OPEN) ws.send(msg)
+      }
+      ws.addEventListener('open', onOpen)
     }
   }, [])
 

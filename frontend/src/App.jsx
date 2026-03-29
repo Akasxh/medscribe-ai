@@ -207,7 +207,8 @@ export default function App() {
 
   const handleStop = useCallback(() => {
     recorder.stopRecording()
-    setTimeout(() => ws.sendStop(), 500)
+    // 2s delay: Sarvam API needs time to process the final audio chunk
+    setTimeout(() => ws.sendStop(), 2000)
   }, [recorder, ws])
 
   // Demo mode handler
@@ -225,7 +226,7 @@ export default function App() {
         setTranscriptLines(prev => [...prev, text])
       }
       ws.sendTranscript(text, isFinal)
-    }, needsDelay ? 800 : 0)
+    }, needsDelay ? 1500 : 0)
   }, [ws])
 
   // When demo finishes, send stop to trigger Gemini processing

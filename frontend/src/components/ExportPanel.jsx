@@ -17,7 +17,9 @@ function downloadJSON(data, filename) {
   const a = document.createElement('a')
   a.href = url
   a.download = filename
+  document.body.appendChild(a)
   a.click()
+  document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
@@ -134,8 +136,6 @@ function ExportButton({ onClick, icon: Icon, label, variant = 'default', success
 }
 
 export default function ExportPanel({ clinicalNote, fhirBundle }) {
-  if (!clinicalNote && !fhirBundle) return null
-
   const handleWhatsAppShare = useCallback(() => {
     if (!clinicalNote) return
     const { chief_complaint, diagnosis, medications, follow_up } = clinicalNote
@@ -164,6 +164,8 @@ export default function ExportPanel({ clinicalNote, fhirBundle }) {
     if (follow_up) lines.push(`F/U: ${follow_up}`)
     await navigator.clipboard.writeText(lines.join('\n'))
   }, [clinicalNote])
+
+  if (!clinicalNote && !fhirBundle) return null
 
   return (
     <div className="card p-4">

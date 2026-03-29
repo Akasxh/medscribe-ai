@@ -53,7 +53,9 @@ function exportCSV(sessions) {
   const a = document.createElement('a')
   a.href = url
   a.download = `medscribe-consultations-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
   a.click()
+  document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
@@ -63,7 +65,9 @@ function exportJSON(sessions) {
   const a = document.createElement('a')
   a.href = url
   a.download = `medscribe-consultations-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(a)
   a.click()
+  document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
