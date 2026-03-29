@@ -10,7 +10,6 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom'],
           'vendor-qrcode': ['qrcode'],
           'vendor-motion': ['framer-motion'],
-          'vendor-charts': ['recharts'],
         }
       }
     }
