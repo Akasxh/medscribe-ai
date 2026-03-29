@@ -26,7 +26,7 @@ export default function UserRegistration({ onRegister }) {
   const [doctorId, setDoctorId] = useState('')
   const [hospital, setHospital] = useState('')
   const [error, setError] = useState('')
-  const [isSignIn, setIsSignIn] = useState(false)
+  const [isSignIn, setIsSignIn] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
   const { signUp, signIn } = useSupabaseAuth()
@@ -210,7 +210,7 @@ export default function UserRegistration({ onRegister }) {
           <div className="grid grid-cols-2 gap-3 mb-6">
             <button
               type="button"
-              onClick={() => { setSelectedRole('doctor'); setError(''); setIsSignIn(false) }}
+              onClick={() => { setSelectedRole('doctor'); setError(''); setIsSignIn(true) }}
               className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                 selectedRole === 'doctor'
                   ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/30 shadow-md ring-1 ring-blue-600/20'
@@ -454,7 +454,7 @@ export default function UserRegistration({ onRegister }) {
               className="mt-4 w-full flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
             >
               <ArrowLeftRight className="w-3 h-3" />
-              {isSignIn ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
+              {isSignIn ? 'New here? Create an account' : 'Already have an account? Sign in'}
             </button>
           )}
 
