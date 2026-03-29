@@ -21,6 +21,7 @@ import LanguageSelector from './components/LanguageSelector'
 import ToastContainer from './components/ToastNotification'
 import LandingHero from './components/LandingHero'
 import AdminLogin from './components/AdminLogin'
+import AdminDashboard from './components/AdminDashboard'
 import { FileJson, ClipboardList, Shield, RotateCcw } from 'lucide-react'
 
 // Lazy-loaded components (not needed on initial render)
@@ -71,7 +72,11 @@ function loadUser() {
 }
 
 export default function App() {
-  const [page, setPage] = useState(() => window.location.hash === '#admin-login' ? 'admin-login' : 'app')
+  const [page, setPage] = useState(() => {
+    if (window.location.hash === '#admin-login') return 'admin-login'
+    if (localStorage.getItem('medscribe_admin')) return 'admin-dashboard'
+    return 'app'
+  })
   const [user, setUser] = useState(loadUser)
   const [sessionId, setSessionId] = useState(getOrCreateSessionId)
   const [transcriptLines, setTranscriptLines] = useState([])
@@ -201,7 +206,12 @@ export default function App() {
 
   // Show admin login page
   if (page === 'admin-login') {
-    return <AdminLogin onBack={() => { window.location.hash = ''; setPage('app') }} />
+    return <AdminLogin onBack={() => { window.location.hash = ''; setPage('app') }} onLoginSuccess={() => setPage('admin-dashboard')} />
+  }
+
+  // Show admin dashboard
+  if (page === 'admin-dashboard') {
+    return <AdminDashboard onLogout={() => setPage('app')} />
   }
 
   // Show registration screen if no user is logged in

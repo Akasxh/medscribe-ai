@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Activity, ArrowLeft } from 'lucide-react'
 
-export default function AdminLogin({ onBack }) {
+export default function AdminLogin({ onBack, onLoginSuccess }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -29,8 +29,7 @@ export default function AdminLogin({ onBack }) {
         return
       }
       localStorage.setItem('medscribe_admin', JSON.stringify(data))
-      window.location.hash = '#admin'
-      window.location.reload()
+      onLoginSuccess()
     } catch {
       setError('Could not connect to server')
     } finally {

@@ -141,6 +141,87 @@ async def admin_login(req: AdminLoginRequest):
     raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
+@app.get("/api/admin/consultations")
+async def list_consultations():
+    """Fetch all consultations from Supabase for admin dashboard."""
+    from services.supabase_service import get_client
+
+    client = get_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+
+    try:
+        import asyncio
+
+        # Fetch all three tables in parallel
+        cons_future = asyncio.to_thread(
+            lambda: client.table("consultations")
+            .select("*")
+            .order("created_at", desc=True)
+            .limit(100)
+            .execute()
+        )
+        notes_future = asyncio.to_thread(
+            lambda: client.table("clinical_notes")
+            .select("*")
+            .execute()
+        )
+        fhir_future = asyncio.to_thread(
+            lambda: client.table("fhir_bundles")
+            .select("consultation_id,quality_score,quality_grade")
+            .execute()
+        )
+
+        cons_res, notes_res, fhir_res = await asyncio.gather(
+            cons_future, notes_future, fhir_future
+        )
+
+        # Index notes and fhir by consultation_id for fast lookup
+        notes_map = {n["consultation_id"]: n for n in (notes_res.data or [])}
+        fhir_map = {f["consultation_id"]: f for f in (fhir_res.data or [])}
+
+        # Merge into single response
+        results = []
+        for c in (cons_res.data or []):
+            cid = c["id"]
+            note = notes_map.get(cid)
+            fhir = fhir_map.get(cid)
+            results.append({
+                "id": cid,
+                "doctor_name": c.get("doctor_name", ""),
+                "patient_name": c.get("patient_name", ""),
+                "specialty": c.get("specialty", "general"),
+                "status": c.get("status", "completed"),
+                "transcript": c.get("transcript", ""),
+                "created_at": c.get("created_at"),
+                "clinical_note": {
+                    "chief_complaint": note.get("chief_complaint", "") if note else "",
+                    "patient_info": note.get("patient_info", {}) if note else {},
+                    "symptoms": note.get("symptoms", []) if note else [],
+                    "diagnosis": note.get("diagnosis", []) if note else [],
+                    "medications": note.get("medications", []) if note else [],
+                    "vitals": note.get("vitals", {}) if note else {},
+                    "allergies": note.get("allergies", []) if note else [],
+                    "differential_diagnosis": note.get("differential_diagnosis", []) if note else [],
+                    "risk_factors": note.get("risk_factors", []) if note else [],
+                    "recommended_tests": note.get("recommended_tests", []) if note else [],
+                    "follow_up": note.get("follow_up", "") if note else "",
+                    "history_of_present_illness": note.get("history_of_present_illness", "") if note else "",
+                    "clinical_notes": note.get("clinical_notes_text", "") if note else "",
+                } if note else None,
+                "fhir_quality": {
+                    "score": fhir.get("quality_score"),
+                    "grade": fhir.get("quality_grade"),
+                } if fhir else None,
+                "cds_alerts": c.get("cds_alerts", []),
+            })
+
+        return {"consultations": results, "total": len(results)}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch consultations: {e}")
+
+
 @app.post("/api/upload-consultation")
 async def upload_consultation(req: UploadConsultationRequest):
     """Upload a completed consultation to Supabase."""
