@@ -91,7 +91,8 @@ async def transcribe_audio_endpoint(
 ):
     """Transcribe audio using Sarvam AI STT."""
     audio_bytes = await file.read()
-    transcript = await transcribe_audio(audio_bytes, language)
+    content_type = file.content_type or "audio/webm"
+    transcript = await transcribe_audio(audio_bytes, language, content_type=content_type)
     if transcript is not None:
         return {"transcript": transcript, "language": language}
     return {"error": "Transcription failed", "transcript": ""}
@@ -110,7 +111,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
         return
 
     await websocket.accept()
-    await asyncio.to_thread(_cleanup_sessions)
+    _cleanup_sessions()  # fast dict ops, no need for thread
     logger.info("WebSocket connected for session %s", session_id)
 
     # Get or create session
@@ -273,7 +274,7 @@ async def websocket_transcribe(websocket: WebSocket, session_id: str):
         logger.info("WebSocket disconnected for session %s", session_id)
     except Exception as e:
         logger.error("WebSocket error for session %s: %s", session_id, e, exc_info=True)
-        await _send_error(websocket, str(e))
+        await _send_error(websocket, "An internal error occurred.")
 
 
 async def _send_error(websocket: WebSocket, message: str) -> None:
