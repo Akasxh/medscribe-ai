@@ -72,7 +72,7 @@ export default function App() {
   const [abhaId, setAbhaId] = useState(null)
   const [consented, setConsented] = useState(() => sessionStorage.getItem('medscribe_consent') === 'true')
   const [patientName, setPatientName] = useState('')
-  const [speechLang, setSpeechLang] = useState('unknown')
+  const [speechLang, setSpeechLang] = useState('hi-IN')
   const [useSarvam, setUseSarvam] = useState(true)
   const [demoPlaying, setDemoPlaying] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)

@@ -65,8 +65,9 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
     const snapshot = chunksRef.current
     chunksRef.current = []
 
-    const blob = new Blob(snapshot, { type: 'audio/webm' })
-    if (blob.size < 1000) return
+    const blob = new Blob(snapshot, { type: 'audio/webm;codecs=opus' })
+    // Skip chunks under 5KB — too short for meaningful transcription
+    if (blob.size < 5000) return
 
     const formData = new FormData()
     formData.append('file', blob, 'audio.webm')
@@ -135,7 +136,15 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
   const startSarvamRecording = useCallback(async () => {
     let stream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: { ideal: 16000 },
+          channelCount: { exact: 1 },
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      })
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
           ? 'audio/webm;codecs=opus'
@@ -155,12 +164,12 @@ export default function useAudioRecorder(onTranscript, onCommand, language = 'hi
       }
 
       mediaRecorderRef.current = mediaRecorder
-      mediaRecorder.start(1000) // 1s chunks
+      mediaRecorder.start(500) // 500ms chunks for smooth accumulation
 
-      // Send to Sarvam every 5 seconds
+      // Send to Sarvam every 10 seconds — longer chunks = better context
       sarvamIntervalRef.current = setInterval(() => {
         sendChunksToSarvam()
-      }, 5000)
+      }, 10000)
 
       setIsRecording(true)
       isRecordingRef.current = true
