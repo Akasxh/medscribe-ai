@@ -537,7 +537,7 @@ export default function App() {
 
       {/* Footer — compact */}
       <footer className="text-center py-3 text-[11px] text-slate-400 dark:text-slate-600">
-        MedScribe AI — HACKMATRIX 2.0 (Jilo Health x NJACK IIT Patna)
+        MedScribe AI · Built for HACKMATRIX 2.0
       </footer>
     </div>
   )
