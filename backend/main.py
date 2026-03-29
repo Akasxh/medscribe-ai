@@ -61,7 +61,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app = FastAPI(
-    title="MedScribe AI",
+    title="MedVani AI",
     description="Mobile-First Ambient AI Scribe with Real-Time FHIR Conversion",
     version="1.0.0",
 )
@@ -102,7 +102,7 @@ async def startup_health_check():
 async def health_check():
     return {
         "status": "healthy",
-        "service": "MedScribe AI",
+        "service": "MedVani AI",
         "version": "1.0.0",
         "features": {
             "gemini": bool(os.getenv("GEMINI_API_KEY", "")),

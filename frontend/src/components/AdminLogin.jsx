@@ -46,7 +46,7 @@ export default function AdminLogin({ onBack, onLoginSuccess }) {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-              MedScribe<span className="text-blue-600 dark:text-blue-400">AI</span>
+              MedVani<span className="text-blue-600 dark:text-blue-400">AI</span>
               <span className="text-sm font-normal text-slate-500 ml-2">Admin</span>
             </h1>
           </div>

@@ -28,9 +28,9 @@ export default function Header({ user, onLogout }) {
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <img src="/icons/logo.svg" alt="MedScribe AI" width="32" height="32" className="w-8 h-8 rounded-lg shadow-sm" />
+            <img src="/icons/logo.svg" alt="MedVani AI" width="32" height="32" className="w-8 h-8 rounded-lg shadow-sm" />
             <span className="text-sm sm:text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-              MedScribe<span className="text-blue-600 dark:text-blue-400 ml-0.5 hidden sm:inline">AI</span>
+              MedVani<span className="text-blue-600 dark:text-blue-400 ml-0.5 hidden sm:inline">AI</span>
             </span>
           </div>
 

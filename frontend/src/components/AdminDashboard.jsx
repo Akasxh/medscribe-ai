@@ -48,7 +48,7 @@ export default function AdminDashboard({ onLogout }) {
               <Activity className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
             <span className="text-lg font-bold text-slate-900 dark:text-white">
-              MedScribe<span className="text-blue-600 dark:text-blue-400">AI</span>
+              MedVani<span className="text-blue-600 dark:text-blue-400">AI</span>
               <span className="text-sm font-normal text-slate-500 ml-2">Admin Dashboard</span>
             </span>
           </div>

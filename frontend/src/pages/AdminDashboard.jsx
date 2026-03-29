@@ -139,7 +139,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-white leading-tight tracking-tight">
-                MedScribe<span className="opacity-80">AI</span> Admin Portal
+                MedVani<span className="opacity-80">AI</span> Admin Portal
               </h1>
               <p className="text-[11px] text-white/60">Hospital Management Dashboard</p>
             </div>
@@ -319,7 +319,7 @@ export default function AdminDashboard() {
       </main>
 
       <footer className="text-center py-3 text-[11px] text-slate-400 dark:text-slate-600">
-        MedScribe AI Admin Portal — HACKMATRIX 2.0 (Jilo Health x NJACK IIT Patna)
+        MedVani AI Admin Portal — HACKMATRIX 2.0 (Jilo Health x NJACK IIT Patna)
       </footer>
     </div>
   )

@@ -54,7 +54,7 @@ export default function UserRegistration({ onRegister, onAdminLogin }) {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-              MedScribe<span className="text-blue-600 dark:text-blue-400">AI</span>
+              MedVani<span className="text-blue-600 dark:text-blue-400">AI</span>
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 -mt-0.5">Ambient AI Scribe</p>
           </div>
@@ -63,7 +63,7 @@ export default function UserRegistration({ onRegister, onAdminLogin }) {
         {/* Card */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 sm:p-8">
           <div className="text-center mb-6">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Welcome to MedScribe AI</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Welcome to MedVani AI</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Enter your details to begin</p>
           </div>
 
